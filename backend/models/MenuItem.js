@@ -11,6 +11,12 @@ const menuItemSchema = new mongoose.Schema(
     },
     ingredients: { type: String, required: true, trim: true },
     image: { type: String, required: true },
+    discount: {
+      percentage: { type: Number, min: 0, max: 100, default: 0 },
+      isActive: { type: Boolean, default: false },
+      startTime: { type: Date },
+      endTime: { type: Date },
+    },
   },
   { timestamps: true }
 );

@@ -5,6 +5,7 @@ const path = require('path');
 require('dotenv').config();
 
 const menuRoutes = require('./routes/menu');
+const discountRoutes = require('./routes/discounts');
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/menu', menuRoutes);
+app.use('/discounts', discountRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
