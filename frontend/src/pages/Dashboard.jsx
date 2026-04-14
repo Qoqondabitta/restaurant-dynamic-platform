@@ -13,9 +13,34 @@ import {
   updateDiscount,
   deleteDiscount,
 } from '../api/discounts';
+import { fetchSettings, updateSettings } from '../api/settings';
 import { useLanguage } from '../context/LanguageContext';
 
 const CATEGORIES = ['Drinks', 'Main Dishes', 'Salads', 'Soups', 'Desserts'];
+
+const SUPPORTED_LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'uz', label: 'Uzbek' },
+  { code: 'pl', label: 'Polish' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'tr', label: 'Turkish' },
+  { code: 'ar', label: 'Arabic' },
+  { code: 'zh', label: 'Mandarin' },
+  { code: 'ja', label: 'Japanese' },
+  { code: 'ko', label: 'Korean' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'fr', label: 'French' },
+  { code: 'it', label: 'Italian' },
+];
+
+const CURRENCIES = [
+  { code: 'USD', symbol: '$' },
+  { code: 'EUR', symbol: '€' },
+  { code: 'RUB', symbol: '₽' },
+  { code: 'UZS', symbol: "so'm" },
+  { code: 'PLN', symbol: 'zł' },
+];
 
 const CATEGORY_TYPE = {
   Drinks: 'drink',
@@ -36,10 +61,11 @@ function toLocalDatetime(date) {
 }
 
 const EMPTY_FORM = {
-  title: '',
+  title: {},
+  ingredients: {},
   price: '',
+  currency: 'USD',
   category: 'Main Dishes',
-  ingredients: '',
   image: null,
   imageUrl: '',
 };
@@ -62,20 +88,32 @@ const inputCls =
   'w-full bg-dark border border-dark-border rounded-lg px-4 py-2.5 text-cream text-sm focus:outline-none focus:border-gold/50 transition-colors placeholder-gray-600';
 
 // ─── Item Form Modal (Add / Edit) ────────────────────────────────────────────
-function ItemFormModal({ editItem, onClose, onSaved }) {
+function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_FORM);
+  const [langTab, setLangTab] = useState(enabledLangs?.[0]?.code || 'en');
   const [preview, setPreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Reset active tab when enabled languages change
+  useEffect(() => {
+    if (enabledLangs?.length) setLangTab(enabledLangs[0].code);
+  }, [enabledLangs]);
+
   useEffect(() => {
     if (editItem) {
+      const rawTitle = editItem.title || {};
+      const rawIng   = editItem.ingredients || {};
+      // Handle both legacy string format and new plain-object (Map) format
+      const titleObj = typeof rawTitle === 'string' ? { en: rawTitle } : rawTitle;
+      const ingObj   = typeof rawIng   === 'string' ? { en: rawIng   } : rawIng;
       setForm({
-        title: editItem.title,
+        title: titleObj,
+        ingredients: ingObj,
         price: editItem.price,
+        currency: editItem.currency || 'USD',
         category: editItem.category,
-        ingredients: editItem.ingredients,
         image: null,
         imageUrl: editItem.image.startsWith('http') ? editItem.image : '',
       });
@@ -84,12 +122,10 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
   }, [editItem]);
 
   const handleChange = (e) => {
-    const { name, value, files, type, checked } = e.target;
+    const { name, value, files } = e.target;
     if (name === 'image' && files[0]) {
       setForm((p) => ({ ...p, image: files[0], imageUrl: '' }));
       setPreview(URL.createObjectURL(files[0]));
-    } else if (type === 'checkbox') {
-      setForm((p) => ({ ...p, [name]: checked }));
     } else {
       setForm((p) => ({ ...p, [name]: value }));
       if (name === 'imageUrl' && value) {
@@ -98,6 +134,9 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
       }
     }
   };
+
+  const handleLang = (field, code, val) =>
+    setForm((p) => ({ ...p, [field]: { ...p[field], [code]: val } }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,12 +147,20 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
       return;
     }
 
+    // Validate all enabled languages have a title
+    const missing = (enabledLangs || []).filter((l) => !form.title[l.code]?.trim());
+    if (missing.length) {
+      setError(`Title required in: ${missing.map((l) => l.label).join(', ')}`);
+      return;
+    }
+
     setSubmitting(true);
     const fd = new FormData();
-    fd.append('title', form.title);
-    fd.append('price', form.price);
+    fd.append('title',       JSON.stringify(form.title));
+    fd.append('ingredients', JSON.stringify(form.ingredients));
+    fd.append('price',    form.price);
+    fd.append('currency', form.currency || 'USD');
     fd.append('category', form.category);
-    fd.append('ingredients', form.ingredients);
     if (form.image) fd.append('image', form.image);
     else if (form.imageUrl) fd.append('imageUrl', form.imageUrl);
 
@@ -131,6 +178,10 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
       setSubmitting(false);
     }
   };
+
+  const activeLang = (enabledLangs || []).find((l) => l.code === langTab)
+    || enabledLangs?.[0]
+    || { code: 'en', label: 'English' };
 
   return (
     <motion.div
@@ -199,38 +250,83 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
             />
           </div>
 
+          {/* Language tabs (shared by Title + Ingredients) */}
+          {enabledLangs && enabledLangs.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              {enabledLangs.map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => setLangTab(l.code)}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg border font-semibold uppercase tracking-wide transition-colors ${
+                    langTab === l.code
+                      ? 'bg-gold/20 border-gold/40 text-gold'
+                      : 'border-dark-border text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
               {t.title}
+              <span className="ml-2 text-gold/60 text-[10px] normal-case tracking-normal font-normal">
+                — {activeLang.label}{activeLang.code === 'en' ? ' (required)' : ' (optional)'}
+              </span>
             </label>
             <input
               type="text"
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              required
-              placeholder="e.g. Grilled Salmon"
+              value={form.title[activeLang.code] || ''}
+              onChange={(e) => handleLang('title', activeLang.code, e.target.value)}
+              required={activeLang.code === 'en'}
+              placeholder={
+                activeLang.code === 'en'
+                  ? 'e.g. Grilled Salmon'
+                  : `Title in ${activeLang.label}`
+              }
               className={inputCls}
             />
           </div>
 
-          {/* Price */}
-          <div>
-            <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-              {t.price}
-            </label>
-            <input
-              type="number"
-              name="price"
-              value={form.price}
-              onChange={handleChange}
-              step="0.01"
-              min="0"
-              required
-              placeholder="0.00"
-              className={inputCls}
-            />
+          {/* Price + Currency */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
+                {t.price}
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={form.price}
+                onChange={handleChange}
+                step="0.01"
+                min="0"
+                required
+                placeholder="0.00"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
+                Currency
+              </label>
+              <select
+                name="currency"
+                value={form.currency}
+                onChange={handleChange}
+                className={inputCls}
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.symbol} {c.code}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Category */}
@@ -256,14 +352,19 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
           <div>
             <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
               {t.ingredients}
+              <span className="ml-2 text-gold/60 text-[10px] normal-case tracking-normal font-normal">
+                — {activeLang.label}
+              </span>
             </label>
             <textarea
-              name="ingredients"
-              value={form.ingredients}
-              onChange={handleChange}
-              required
+              value={form.ingredients[activeLang.code] || ''}
+              onChange={(e) => handleLang('ingredients', activeLang.code, e.target.value)}
               rows={3}
-              placeholder="List the main ingredients…"
+              placeholder={
+                activeLang.code === 'en'
+                  ? 'List the main ingredients…'
+                  : `Ingredients in ${activeLang.label}`
+              }
               className={`${inputCls} resize-none`}
             />
           </div>
@@ -325,7 +426,7 @@ function DeleteModal({ item, onClose, onConfirm }) {
           {t.doYouWantToDelete} this {type}?
         </p>
         <p className="text-gold font-semibold font-serif text-lg mb-6">
-          "{item?.title}"
+          "{getEn(item?.title)}"
         </p>
         <div className="flex gap-3">
           <button
@@ -607,7 +708,7 @@ function DiscountFormModal({ editDiscount, menuItems, onClose, onSaved }) {
                         >
                           {selected && <span className="text-dark text-[10px] font-bold leading-none">✓</span>}
                         </div>
-                        <span className="text-cream text-xs flex-1">{mi.title}</span>
+                        <span className="text-cream text-xs flex-1">{getEn(mi.title)}</span>
                         <span className="text-gray-600 text-[10px]">{mi.category}</span>
                       </div>
                     );
@@ -687,6 +788,17 @@ function DeleteDiscountModal({ discount, onClose, onConfirm }) {
   );
 }
 
+// Resolves a multilingual field to its English value for dashboard display.
+function getEn(field) {
+  if (!field) return '';
+  if (typeof field === 'string') return field;
+  return field.en || Object.values(field)[0] || '';
+}
+
+const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', RUB: '₽', UZS: "so'm", PLN: 'zł' };
+const fmtPrice = (price, currency) =>
+  `${CURRENCY_SYMBOLS[currency] || '$'}${Number(price).toFixed(2)}`;
+
 // ─── Menu Item Card (dashboard) ──────────────────────────────────────────────
 function DashboardCard({ item, onEdit, onDelete }) {
   const { t } = useLanguage();
@@ -705,7 +817,7 @@ function DashboardCard({ item, onEdit, onDelete }) {
       <div className="relative aspect-video overflow-hidden">
         <img
           src={resolveImage(item.image)}
-          alt={item.title}
+          alt={getEn(item.title)}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
@@ -724,26 +836,26 @@ function DashboardCard({ item, onEdit, onDelete }) {
 
       <div className="p-5">
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className="font-serif text-lg text-cream leading-tight">{item.title}</h3>
+          <h3 className="font-serif text-lg text-cream leading-tight">{getEn(item.title)}</h3>
           <div className="text-right">
             {hasDiscount ? (
               <>
                 <span className="block text-gray-500 text-xs line-through">
-                  ${item.price.toFixed(2)}
+                  {fmtPrice(item.price, item.currency)}
                 </span>
                 <span className="text-gold font-semibold text-sm">
-                  ${(item.price * (1 - d.percentage / 100)).toFixed(2)}
+                  {fmtPrice(item.price * (1 - d.percentage / 100), item.currency)}
                 </span>
               </>
             ) : (
               <span className="text-gold font-semibold text-sm whitespace-nowrap">
-                ${item.price.toFixed(2)}
+                {fmtPrice(item.price, item.currency)}
               </span>
             )}
           </div>
         </div>
         <p className="text-gray-500 text-xs leading-relaxed mb-4 line-clamp-2">
-          {item.ingredients}
+          {getEn(item.ingredients)}
         </p>
 
         <div className="flex gap-2">
@@ -844,16 +956,47 @@ export default function Dashboard() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [editDiscount, setEditDiscount] = useState(null);
   const [deleteDiscountItem, setDeleteDiscountItem] = useState(null);
+  // Language settings
+  const [enabledLangCodes, setEnabledLangCodes] = useState(['en']);
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
+    enabledLangCodes.includes(l.code)
+  );
 
   const loadAll = async () => {
     try {
-      const [menuRes, discountRes] = await Promise.all([fetchMenu(), fetchDiscounts()]);
+      const [menuRes, discountRes, settingsRes] = await Promise.all([
+        fetchMenu(),
+        fetchDiscounts(),
+        fetchSettings(),
+      ]);
       setItems(menuRes.data);
       setDiscounts(discountRes.data);
+      setEnabledLangCodes(settingsRes.data.languages || ['en']);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleLang = (code) => {
+    setSettingsSaved(false);
+    setEnabledLangCodes((prev) =>
+      prev.includes(code)
+        ? prev.length > 1 ? prev.filter((c) => c !== code) : prev // min 1
+        : [...prev, code]
+    );
+  };
+
+  const saveLanguageSettings = async () => {
+    try {
+      await updateSettings({ languages: enabledLangCodes });
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1019,6 +1162,55 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* ── Menu Language Settings ── */}
+        <div className="mt-16 border-t border-dark-border pt-10">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-8 h-px bg-gold/40" />
+            <h2 className="font-serif text-2xl text-gold">Menu Languages</h2>
+          </div>
+          <p className="text-gray-600 text-xs uppercase tracking-widest mb-5 ml-12">
+            Select which languages your menu items must be filled in
+          </p>
+
+          <div className="flex flex-wrap gap-2 mb-5">
+            {SUPPORTED_LANGUAGES.map((l) => {
+              const active = enabledLangCodes.includes(l.code);
+              return (
+                <button
+                  key={l.code}
+                  onClick={() => toggleLang(l.code)}
+                  className={`px-4 py-2 rounded-xl border text-xs font-semibold uppercase tracking-widest transition-all duration-200 ${
+                    active
+                      ? 'bg-gold/20 border-gold/50 text-gold'
+                      : 'border-dark-border text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={saveLanguageSettings}
+              className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
+            >
+              Save Languages
+            </button>
+            {settingsSaved && (
+              <motion.span
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-emerald-400 text-sm"
+              >
+                ✓ Saved
+              </motion.span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ── Modals ── */}
@@ -1027,6 +1219,7 @@ export default function Dashboard() {
           <ItemFormModal
             key="form"
             editItem={editItem}
+            enabledLangs={enabledLangs}
             onClose={() => {
               setShowAddModal(false);
               setEditItem(null);

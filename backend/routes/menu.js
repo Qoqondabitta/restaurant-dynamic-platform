@@ -16,21 +16,26 @@ router.get('/', async (req, res) => {
 // POST /menu — add a new item (multipart/form-data or imageUrl in body)
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const { title, price, category, ingredients, imageUrl } = req.body;
+    const { title: titleJson, ingredients: ingredientsJson, price, currency, category, imageUrl } = req.body;
 
-    const image = req.file
-      ? `/uploads/${req.file.filename}`
-      : imageUrl;
+    const titleObj      = JSON.parse(titleJson      || '{}');
+    const ingredientsObj = JSON.parse(ingredientsJson || '{}');
 
+    if (!titleObj.en) {
+      return res.status(400).json({ message: 'English title (en) is required' });
+    }
+
+    const image = req.file ? `/uploads/${req.file.filename}` : imageUrl;
     if (!image) {
       return res.status(400).json({ message: 'An image file or imageUrl is required' });
     }
 
     const item = new MenuItem({
-      title,
+      title: titleObj,
       price: parseFloat(price),
+      currency: currency || 'USD',
       category,
-      ingredients,
+      ingredients: ingredientsObj,
       image,
     });
 
@@ -44,13 +49,21 @@ router.post('/', upload.single('image'), async (req, res) => {
 // PUT /menu/:id — update an item
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
-    const { title, price, category, ingredients, imageUrl } = req.body;
+    const { title: titleJson, ingredients: ingredientsJson, price, currency, category, imageUrl } = req.body;
+
+    const titleObj      = JSON.parse(titleJson      || '{}');
+    const ingredientsObj = JSON.parse(ingredientsJson || '{}');
+
+    if (!titleObj.en) {
+      return res.status(400).json({ message: 'English title (en) is required' });
+    }
 
     const update = {
-      title,
+      title: titleObj,
       price: parseFloat(price),
+      currency: currency || 'USD',
       category,
-      ingredients,
+      ingredients: ingredientsObj,
     };
 
     if (req.file) {

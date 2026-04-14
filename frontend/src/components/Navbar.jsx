@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
 const LANGS = [
-  { code: 'en', label: 'EN', flag: '🇺🇸' },
-  { code: 'ru', label: 'RU', flag: '🇷🇺' },
-  { code: 'uz', label: 'UZ', flag: '🇺🇿' },
+  { code: 'en', label: 'ENG', flag: 'https://flagcdn.com/w40/gb.png' },
+  { code: 'ru', label: 'RUS', flag: 'https://flagcdn.com/w40/ru.png' },
+  { code: 'uz', label: 'UZB', flag: 'https://flagcdn.com/w40/uz.png' },
 ];
 
 export default function Navbar() {
@@ -67,7 +67,7 @@ export default function Navbar() {
               onClick={() => setLangOpen((o) => !o)}
               className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-gray-400 hover:text-gold transition-colors duration-200 border border-gold/20 hover:border-gold/50 rounded-lg px-3 py-1.5"
             >
-              <span>{current.flag}</span>
+              <img src={current.flag} alt={current.code} className="w-5 h-4 object-cover rounded-sm" />
               <span>{current.label}</span>
               <span className="text-[10px] opacity-60">▼</span>
             </button>
@@ -94,7 +94,7 @@ export default function Navbar() {
                           : 'text-gray-400 hover:text-cream hover:bg-white/5'
                       }`}
                     >
-                      <span>{l.flag}</span>
+                      <img src={l.flag} alt={l.code} className="w-5 h-4 object-cover rounded-sm" />
                       <span>{l.label}</span>
                     </button>
                   ))}

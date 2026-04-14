@@ -6,6 +6,17 @@ import { useLanguage } from '../context/LanguageContext';
 
 const CATEGORIES = ['Drinks', 'Main Dishes', 'Salads', 'Soups', 'Desserts'];
 
+/** Resolves a multilingual field to a string for the given language code. */
+function itemText(field, lang) {
+  if (!field) return '';
+  if (typeof field === 'string') return field; // legacy plain-string fallback
+  return field[lang] || field.en || Object.values(field)[0] || '';
+}
+
+const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', RUB: '₽', UZS: "so'm", PLN: 'zł' };
+const fmtPrice = (price, currency) =>
+  `${CURRENCY_SYMBOLS[currency] || '$'}${Number(price).toFixed(2)}`;
+
 // ─── Discount helpers ────────────────────────────────────────────────────────
 
 /** Returns the single active global discount, or undefined. */
@@ -171,11 +182,12 @@ function DiscountBanner({ discount, index }) {
 
 // ─── Special Offers Card ─────────────────────────────────────────────────────
 function SpecialOfferCard({ item, activeGlobalDiscount }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const discount = getItemDiscount(item, activeGlobalDiscount);
   const pct = discount?.percentage;
   const newPrice = pct ? discountedPrice(item.price, pct) : item.price;
   const isGlobal = discount?.source === 'global';
+  const title = itemText(item.title, lang);
 
   return (
     <motion.div
@@ -193,7 +205,7 @@ function SpecialOfferCard({ item, activeGlobalDiscount }) {
       <div className="aspect-[4/3] overflow-hidden">
         <img
           src={resolveImage(item.image)}
-          alt={item.title}
+          alt={title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
             e.target.src = 'https://placehold.co/600x400/141414/c9a84c?text=No+Image';
@@ -203,7 +215,7 @@ function SpecialOfferCard({ item, activeGlobalDiscount }) {
 
       <div className="p-4">
         <p className="text-cream font-serif text-base leading-tight mb-1 line-clamp-1">
-          {item.title}
+          {title}
         </p>
         {/* "For [group]" label when sourced from a global discount */}
         {isGlobal && (
@@ -212,8 +224,8 @@ function SpecialOfferCard({ item, activeGlobalDiscount }) {
           </p>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 text-sm line-through">${item.price.toFixed(2)}</span>
-          <span className="text-gold font-bold text-lg">${newPrice.toFixed(2)}</span>
+          <span className="text-gray-500 text-sm line-through">{fmtPrice(item.price, item.currency)}</span>
+          <span className="text-gold font-bold text-lg">{fmtPrice(newPrice, item.currency)}</span>
           <span className="text-gold/70 text-xs font-semibold">-{pct}%</span>
         </div>
       </div>
@@ -229,7 +241,10 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.25 });
   const isEven = index % 2 === 0;
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const title       = itemText(item.title, lang);
+  const ingredients = itemText(item.ingredients, lang);
+  console.log('LANG:', lang, '| ITEM TITLE:', item.title, '| RESOLVED:', title);
 
   const discount  = getItemDiscount(item, activeGlobalDiscount);
   const pct       = discount?.percentage ?? null;
@@ -270,7 +285,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       >
         <img
           src={resolveImage(item.image)}
-          alt={item.title}
+          alt={title}
           loading="lazy"
           className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
           onError={(e) => {
@@ -305,7 +320,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
           {t.categories[item.category] || item.category}
         </span>
         <h3 className="font-serif text-4xl md:text-5xl text-cream leading-tight mb-4">
-          {item.title}
+          {title}
         </h3>
 
         {/* Price — discounted or normal */}
@@ -313,14 +328,14 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
           <>
             <div className="flex items-center gap-4 mb-3">
               <span className="text-gray-500 text-2xl line-through font-light">
-                ${item.price.toFixed(2)}
+                {fmtPrice(item.price, item.currency)}
               </span>
               <motion.span
                 className="text-gold text-3xl font-bold"
                 animate={{ textShadow: ['0 0 0px #c9a84c', '0 0 12px #c9a84c', '0 0 0px #c9a84c'] }}
                 transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
               >
-                ${newPrice.toFixed(2)}
+                {fmtPrice(newPrice, item.currency)}
               </motion.span>
               <span className="bg-gold/20 border border-gold/40 text-gold text-xs font-bold px-2.5 py-1 rounded-full">
                 -{pct}%
@@ -339,7 +354,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
             )}
           </>
         ) : (
-          <p className="text-gold text-3xl font-light mb-6">${item.price.toFixed(2)}</p>
+          <p className="text-gold text-3xl font-light mb-6">{fmtPrice(item.price, item.currency)}</p>
         )}
 
         <div className="flex items-center gap-4 mb-6">
@@ -348,7 +363,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
           <div className="w-6 h-px bg-gold/40" />
         </div>
         <p className="text-gray-400 text-sm leading-relaxed max-w-sm">
-          {item.ingredients}
+          {ingredients}
         </p>
       </motion.div>
     </motion.div>
