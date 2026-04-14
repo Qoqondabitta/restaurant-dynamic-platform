@@ -8,6 +8,8 @@ const discountSchema = new mongoose.Schema(
     startTime: { type: Date, required: true },
     endTime: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
+    categories: { type: [String], default: [] },
+    items: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MenuItem' }],
   },
   { timestamps: true }
 );

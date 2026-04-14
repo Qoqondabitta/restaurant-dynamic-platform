@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 // POST /discounts
 router.post('/', async (req, res) => {
   try {
-    const { title, percentage, appliesTo, startTime, endTime, isActive } = req.body;
+    const { title, percentage, appliesTo, startTime, endTime, isActive, categories, items } = req.body;
     const discount = new Discount({
       title,
       percentage: parseFloat(percentage),
@@ -23,6 +23,8 @@ router.post('/', async (req, res) => {
       startTime: startTime ? new Date(startTime) : null,
       endTime: endTime ? new Date(endTime) : null,
       isActive: isActive !== undefined ? isActive : true,
+      categories: Array.isArray(categories) ? categories : [],
+      items: Array.isArray(items) ? items : [],
     });
     const saved = await discount.save();
     res.status(201).json(saved);
@@ -34,7 +36,7 @@ router.post('/', async (req, res) => {
 // PUT /discounts/:id
 router.put('/:id', async (req, res) => {
   try {
-    const { title, percentage, appliesTo, startTime, endTime, isActive } = req.body;
+    const { title, percentage, appliesTo, startTime, endTime, isActive, categories, items } = req.body;
     const update = {
       title,
       percentage: parseFloat(percentage),
@@ -42,6 +44,8 @@ router.put('/:id', async (req, res) => {
       startTime: startTime ? new Date(startTime) : null,
       endTime: endTime ? new Date(endTime) : null,
       isActive,
+      categories: Array.isArray(categories) ? categories : [],
+      items: Array.isArray(items) ? items : [],
     };
     const discount = await Discount.findByIdAndUpdate(req.params.id, update, {
       new: true,

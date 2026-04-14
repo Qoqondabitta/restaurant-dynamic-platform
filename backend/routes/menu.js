@@ -16,10 +16,7 @@ router.get('/', async (req, res) => {
 // POST /menu — add a new item (multipart/form-data or imageUrl in body)
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const {
-      title, price, category, ingredients, imageUrl,
-      discountPercentage, discountIsActive, discountStartTime, discountEndTime,
-    } = req.body;
+    const { title, price, category, ingredients, imageUrl } = req.body;
 
     const image = req.file
       ? `/uploads/${req.file.filename}`
@@ -35,12 +32,6 @@ router.post('/', upload.single('image'), async (req, res) => {
       category,
       ingredients,
       image,
-      discount: {
-        percentage: discountPercentage ? parseFloat(discountPercentage) : 0,
-        isActive: discountIsActive === 'true',
-        startTime: discountStartTime ? new Date(discountStartTime) : null,
-        endTime: discountEndTime   ? new Date(discountEndTime)   : null,
-      },
     });
 
     const saved = await item.save();
@@ -53,22 +44,13 @@ router.post('/', upload.single('image'), async (req, res) => {
 // PUT /menu/:id — update an item
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
-    const {
-      title, price, category, ingredients, imageUrl,
-      discountPercentage, discountIsActive, discountStartTime, discountEndTime,
-    } = req.body;
+    const { title, price, category, ingredients, imageUrl } = req.body;
 
     const update = {
       title,
       price: parseFloat(price),
       category,
       ingredients,
-      // Dot-notation guarantees Mongoose updates each subdocument field
-      // individually rather than replacing the whole discount object.
-      'discount.percentage': discountPercentage ? parseFloat(discountPercentage) : 0,
-      'discount.isActive':   discountIsActive === 'true',
-      'discount.startTime':  discountStartTime ? new Date(discountStartTime) : null,
-      'discount.endTime':    discountEndTime   ? new Date(discountEndTime)   : null,
     };
 
     if (req.file) {

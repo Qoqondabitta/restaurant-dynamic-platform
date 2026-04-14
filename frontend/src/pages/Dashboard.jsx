@@ -42,8 +42,6 @@ const EMPTY_FORM = {
   ingredients: '',
   image: null,
   imageUrl: '',
-  discountPercentage: '',
-  discountIsActive: false,
 };
 
 const EMPTY_DISCOUNT = {
@@ -55,6 +53,8 @@ const EMPTY_DISCOUNT = {
   startTime: '',
   endTime: '',
   isActive: true,
+  categories: [],
+  items: [],
 };
 
 // ─── Input styles ────────────────────────────────────────────────────────────
@@ -71,7 +71,6 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
 
   useEffect(() => {
     if (editItem) {
-      const d = editItem.discount || {};
       setForm({
         title: editItem.title,
         price: editItem.price,
@@ -79,8 +78,6 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
         ingredients: editItem.ingredients,
         image: null,
         imageUrl: editItem.image.startsWith('http') ? editItem.image : '',
-        discountPercentage: d.percentage || '',
-        discountIsActive: d.isActive || false,
       });
       setPreview(resolveImage(editItem.image));
     }
@@ -119,9 +116,6 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
     fd.append('ingredients', form.ingredients);
     if (form.image) fd.append('image', form.image);
     else if (form.imageUrl) fd.append('imageUrl', form.imageUrl);
-
-    fd.append('discountPercentage', form.discountPercentage || '0');
-    fd.append('discountIsActive', String(form.discountIsActive));
 
     try {
       if (editItem) {
@@ -274,61 +268,6 @@ function ItemFormModal({ editItem, onClose, onSaved }) {
             />
           </div>
 
-          {/* ── Item Discount Section ── */}
-          <div className="border border-gold/20 rounded-xl p-4 space-y-4 bg-gold/5">
-            <div className="flex items-center justify-between">
-              <p className="text-gold text-xs font-bold uppercase tracking-[0.25em]">
-                ✦ {t.discountSection}
-              </p>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <span className="text-xs text-gray-400 uppercase tracking-widest">
-                  {t.discountActive}
-                </span>
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    name="discountIsActive"
-                    checked={form.discountIsActive}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setForm((p) => ({ ...p, discountIsActive: !p.discountIsActive }));
-                    }}
-                    className={`w-10 h-5 rounded-full transition-colors duration-200 cursor-pointer ${
-                      form.discountIsActive ? 'bg-gold' : 'bg-dark-border'
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mt-0.5 ${
-                        form.discountIsActive ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </label>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-                {t.discountPercent} (%)
-              </label>
-              <input
-                type="number"
-                name="discountPercentage"
-                value={form.discountPercentage}
-                onChange={handleChange}
-                min="0"
-                max="100"
-                placeholder="e.g. 20"
-                className={inputCls}
-              />
-            </div>
-
-          </div>
-
           {error && (
             <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
               {error}
@@ -408,7 +347,7 @@ function DeleteModal({ item, onClose, onConfirm }) {
 }
 
 // ─── Discount Form Modal ─────────────────────────────────────────────────────
-function DiscountFormModal({ editDiscount, onClose, onSaved }) {
+function DiscountFormModal({ editDiscount, menuItems, onClose, onSaved }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_DISCOUNT);
   const [submitting, setSubmitting] = useState(false);
@@ -425,6 +364,8 @@ function DiscountFormModal({ editDiscount, onClose, onSaved }) {
         startTime: toLocalDatetime(editDiscount.startTime),
         endTime: toLocalDatetime(editDiscount.endTime),
         isActive: editDiscount.isActive,
+        categories: editDiscount.categories ?? [],
+        items: (editDiscount.items ?? []).map((id) => String(id)),
       });
     }
   }, [editDiscount]);
@@ -445,6 +386,8 @@ function DiscountFormModal({ editDiscount, onClose, onSaved }) {
       startTime: form.startTime ? new Date(form.startTime).toISOString() : '',
       endTime: form.endTime ? new Date(form.endTime).toISOString() : '',
       isActive: form.isActive,
+      categories: form.categories,
+      items: form.items,
     };
     try {
       if (editDiscount) {
@@ -594,6 +537,85 @@ function DiscountFormModal({ editDiscount, onClose, onSaved }) {
             </div>
             <span className="text-xs text-gray-400 uppercase tracking-widest">{t.active}</span>
           </label>
+
+          {/* ── Targeting ── */}
+          <div className="border border-gold/20 rounded-xl p-4 space-y-4 bg-gold/5">
+            <p className="text-gold text-xs font-bold uppercase tracking-[0.25em]">
+              ✦ Targeting <span className="text-gray-600 font-normal normal-case tracking-normal">(leave empty = all items)</span>
+            </p>
+
+            {/* Categories */}
+            <div>
+              <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
+                Categories
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((cat) => {
+                  const selected = form.categories.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() =>
+                        setForm((p) => ({
+                          ...p,
+                          categories: selected
+                            ? p.categories.filter((c) => c !== cat)
+                            : [...p.categories, cat],
+                        }))
+                      }
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                        selected
+                          ? 'bg-gold/20 border border-gold/50 text-gold'
+                          : 'border border-dark-border text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Items */}
+            {menuItems.length > 0 && (
+              <div>
+                <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
+                  Specific Items
+                </label>
+                <div className="max-h-36 overflow-y-auto border border-dark-border rounded-lg divide-y divide-dark-border">
+                  {menuItems.map((mi) => {
+                    const id = String(mi._id);
+                    const selected = form.items.includes(id);
+                    return (
+                      <div
+                        key={id}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            items: selected
+                              ? p.items.filter((i) => i !== id)
+                              : [...p.items, id],
+                          }))
+                        }
+                        className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
+                      >
+                        <div
+                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selected ? 'bg-gold border-gold' : 'border-dark-border'
+                          }`}
+                        >
+                          {selected && <span className="text-dark text-[10px] font-bold leading-none">✓</span>}
+                        </div>
+                        <span className="text-cream text-xs flex-1">{mi.title}</span>
+                        <span className="text-gray-600 text-[10px]">{mi.category}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {error && (
             <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
@@ -1026,6 +1048,7 @@ export default function Dashboard() {
           <DiscountFormModal
             key="discount-form"
             editDiscount={editDiscount}
+            menuItems={items}
             onClose={() => {
               setShowDiscountModal(false);
               setEditDiscount(null);

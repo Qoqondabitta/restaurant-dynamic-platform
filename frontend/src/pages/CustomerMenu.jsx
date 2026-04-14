@@ -21,25 +21,25 @@ function getActiveGlobalDiscount(discounts) {
 
 /**
  * Returns { percentage, source, title?, appliesTo? } or null.
- * Priority: item-level discount > global discount fallback.
+ * Discounts come exclusively from global promotions.
+ * Respects category/item targeting when set; falls back to all items when empty.
  */
 function getItemDiscount(item, globalDiscount) {
-  // 1. Item-level discount (highest priority) — no time window, active if enabled
-  const d = item.discount;
-  if (d && d.isActive && d.percentage > 0) {
-    return { percentage: d.percentage, source: 'item' };
-  }
-
-  // 2. Global discount fallback
   if (globalDiscount) {
-    return {
-      percentage: globalDiscount.percentage,
-      source: 'global',
-      title: globalDiscount.title,
-      appliesTo: globalDiscount.appliesTo,
-    };
+    const cats    = globalDiscount.categories ?? [];
+    const itemIds = globalDiscount.items ?? [];
+    const noFilter       = !cats.length && !itemIds.length;
+    const matchesCategory = cats.includes(item.category);
+    const matchesItem     = itemIds.includes(item._id);
+    if (noFilter || matchesCategory || matchesItem) {
+      return {
+        percentage: globalDiscount.percentage,
+        source: 'global',
+        title: globalDiscount.title,
+        appliesTo: globalDiscount.appliesTo,
+      };
+    }
   }
-
   return null;
 }
 
@@ -376,7 +376,7 @@ function CategoryHeading({ name }) {
 }
 
 // ─── Debug Panel ─────────────────────────────────────────────────────────────
-function DebugPanel({ menuItems, discounts }) {
+function DebugPanel({ discounts }) {
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(new Date());
 
@@ -438,48 +438,6 @@ function DebugPanel({ menuItems, discounts }) {
             })}
           </div>
 
-          {/* Item discounts */}
-          <div>
-            <p className="text-gold font-bold mb-1">🍽 Item Discounts</p>
-            {menuItems
-              .filter((i) => i.discount?.percentage > 0)
-              .map((i) => {
-                const d = i.discount;
-                const start = d.startTime ? new Date(d.startTime) : null;
-                const end = d.endTime ? new Date(d.endTime) : null;
-                const inRange =
-                  (!start || now >= start) && (!end || now <= end);
-                const active = d.isActive && d.percentage > 0 && inRange;
-                console.log('[Discount Debug] Item:', {
-                  title: i.title,
-                  now: now.toISOString(),
-                  discount: {
-                    percentage: d.percentage,
-                    isActive: d.isActive,
-                    startTime: start?.toISOString() ?? null,
-                    endTime: end?.toISOString() ?? null,
-                  },
-                  inTimeRange: inRange,
-                  effectivelyActive: active,
-                });
-                return (
-                  <div key={i._id} className="mb-2 pl-2 border-l-2 border-gold/20">
-                    <p className="text-cream">{i.title} — -{d.percentage}%</p>
-                    <p className="text-gray-500">Start: {fmt(d.startTime)}</p>
-                    <p className="text-gray-500">End:   {fmt(d.endTime)}</p>
-                    <p className={active ? 'text-emerald-400' : 'text-red-400'}>
-                      {active ? '✅ ACTIVE' : '❌ NOT ACTIVE'}{' '}
-                      {!d.isActive && '(isActive=false)'}
-                      {d.isActive && start && now < start && '(not started yet)'}
-                      {d.isActive && end && now > end && '(expired)'}
-                    </p>
-                  </div>
-                );
-              })}
-            {menuItems.filter((i) => i.discount?.percentage > 0).length === 0 && (
-              <p className="text-gray-500">No items with discounts</p>
-            )}
-          </div>
         </div>
       )}
     </div>
@@ -775,7 +733,7 @@ export default function CustomerMenu() {
       </main>
 
       {/* ── Debug Panel (fixed bottom-right, toggle with 🐛 button) ── */}
-      <DebugPanel menuItems={menuItems} discounts={discounts} />
+      <DebugPanel discounts={discounts} />
 
       {/* ── Footer ── */}
       <footer className="bg-dark-card border-t border-dark-border py-16 text-center mt-8">
