@@ -2,7 +2,24 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { fetchMenu, resolveImage } from '../api/menu';
 import { fetchDiscounts } from '../api/discounts';
+import { fetchSettings } from '../api/settings';
 import { useLanguage } from '../context/LanguageContext';
+
+const languageOptions = {
+  en: { label: 'ENG', flag: '🇬🇧' },
+  ru: { label: 'RUS', flag: '🇷🇺' },
+  uz: { label: 'UZB', flag: '🇺🇿' },
+  pl: { label: 'PL',  flag: '🇵🇱' },
+  es: { label: 'ES',  flag: '🇪🇸' },
+  tr: { label: 'TR',  flag: '🇹🇷' },
+  ar: { label: 'AR',  flag: '🇸🇦' },
+  zh: { label: 'ZH',  flag: '🇨🇳' },
+  ja: { label: 'JA',  flag: '🇯🇵' },
+  ko: { label: 'KO',  flag: '🇰🇷' },
+  pt: { label: 'PT',  flag: '🇵🇹' },
+  fr: { label: 'FR',  flag: '🇫🇷' },
+  it: { label: 'IT',  flag: '🇮🇹' },
+};
 
 const CATEGORIES = ['Drinks', 'Main Dishes', 'Salads', 'Soups', 'Desserts'];
 
@@ -181,13 +198,14 @@ function DiscountBanner({ discount, index }) {
 }
 
 // ─── Special Offers Card ─────────────────────────────────────────────────────
-function SpecialOfferCard({ item, activeGlobalDiscount }) {
-  const { t, lang } = useLanguage();
+function SpecialOfferCard({ item, activeGlobalDiscount, menuLang }) {
+  const { t } = useLanguage();
+  const lang = menuLang || 'en';
   const discount = getItemDiscount(item, activeGlobalDiscount);
   const pct = discount?.percentage;
   const newPrice = pct ? discountedPrice(item.price, pct) : item.price;
   const isGlobal = discount?.source === 'global';
-  const title = itemText(item.title, lang);
+  const title = typeof item.title === 'string' ? item.title : item.title?.[lang] || item.title?.en;
 
   return (
     <motion.div
@@ -237,14 +255,14 @@ function SpecialOfferCard({ item, activeGlobalDiscount }) {
 }
 
 // ─── Single menu item with alternating slide animation ───────────────────────
-function MenuItemCard({ item, index, activeGlobalDiscount }) {
+function MenuItemCard({ item, index, activeGlobalDiscount, menuLang }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.25 });
   const isEven = index % 2 === 0;
-  const { t, lang } = useLanguage();
-  const title       = itemText(item.title, lang);
-  const ingredients = itemText(item.ingredients, lang);
-  console.log('LANG:', lang, '| ITEM TITLE:', item.title, '| RESOLVED:', title);
+  const { t } = useLanguage();
+  const lang = menuLang || 'en';
+  const title = typeof item.title === 'string' ? item.title : item.title?.[lang] || item.title?.en;
+  const ingredients = typeof item.ingredients === 'string' ? item.ingredients : item.ingredients?.[lang] || item.ingredients?.en;
 
   const discount  = getItemDiscount(item, activeGlobalDiscount);
   const pct       = discount?.percentage ?? null;
@@ -473,6 +491,23 @@ export default function CustomerMenu() {
   const [tick, setTick] = useState(0);
   const { t } = useLanguage();
 
+  // ── Menu language state (independent from UI language) ────────────────────
+  const [menuLang, setMenuLang] = useState('en');
+  const [allowedLanguages, setAllowedLanguages] = useState(['en']);
+  const [langSwitcherOpen, setLangSwitcherOpen] = useState(false);
+
+  // Part 6: force default to 'en' on first load, then respect allowedLanguages
+  useEffect(() => {
+    fetchSettings()
+      .then((res) => {
+        const langs = res.data.languages || ['en'];
+        setAllowedLanguages(langs);
+        const defaultLang = langs.includes('en') ? 'en' : langs[0];
+        setMenuLang(defaultLang);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     // ── Fetch helpers ──────────────────────────────────────────────────────
     const loadMenu = () =>
@@ -666,6 +701,7 @@ export default function CustomerMenu() {
                   key={item._id}
                   item={item}
                   activeGlobalDiscount={activeGlobalDiscount}
+                  menuLang={menuLang}
                 />
               ))}
             </div>
@@ -675,7 +711,7 @@ export default function CustomerMenu() {
 
       {/* ── Sticky Category Nav ── */}
       <nav className="sticky top-16 z-40 bg-dark/95 backdrop-blur-md border-b border-dark-border">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
           <div className="flex gap-0 overflow-x-auto scrollbar-hide">
             {ALL_TABS.map((tab) => (
               <button
@@ -696,6 +732,50 @@ export default function CustomerMenu() {
               </button>
             ))}
           </div>
+
+          {/* ── Menu Language Switcher (only if multiple languages allowed) ── */}
+          {allowedLanguages.length > 1 && (
+            <div className="relative flex-shrink-0 ml-4">
+              <button
+                onClick={() => setLangSwitcherOpen((o) => !o)}
+                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-gray-400 hover:text-gold transition-colors duration-200 border border-gold/20 hover:border-gold/50 rounded-lg px-3 py-1.5"
+              >
+                <span>{languageOptions[menuLang]?.flag || '🌐'}</span>
+                <span>{languageOptions[menuLang]?.label || menuLang.toUpperCase()}</span>
+                <span className="text-[10px] opacity-60">▼</span>
+              </button>
+
+              <AnimatePresence>
+                {langSwitcherOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 bg-dark-card border border-gold/20 rounded-xl overflow-hidden shadow-xl min-w-[110px] z-50"
+                  >
+                    {allowedLanguages.map((code) => {
+                      const opt = languageOptions[code] || { label: code.toUpperCase(), flag: '🌐' };
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => { setMenuLang(code); setLangSwitcherOpen(false); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors duration-150 ${
+                            menuLang === code
+                              ? 'text-gold bg-gold/10'
+                              : 'text-gray-400 hover:text-cream hover:bg-white/5'
+                          }`}
+                        >
+                          <span>{opt.flag}</span>
+                          <span>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -732,6 +812,7 @@ export default function CustomerMenu() {
                       item={item}
                       index={idx}
                       activeGlobalDiscount={activeGlobalDiscount}
+                      menuLang={menuLang}
                     />
                   ))}
                 </section>

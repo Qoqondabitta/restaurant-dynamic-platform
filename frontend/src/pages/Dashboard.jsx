@@ -943,6 +943,51 @@ function DiscountRow({ discount, onEdit, onDelete }) {
   );
 }
 
+// ─── Language Warning Modal ──────────────────────────────────────────────────
+function LangWarningModal({ singleLang, onAddLanguages, onContinue }) {
+  const langLabel = singleLang?.label || 'English';
+  return (
+    <motion.div
+      key="lang-warning"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+    >
+      <motion.div
+        initial={{ scale: 0.94, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.94, y: 20 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+        className="bg-dark-card border border-dark-border rounded-2xl p-8 max-w-md w-full shadow-2xl"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-2xl">🌐</span>
+          <h3 className="font-serif text-xl text-gold">Single Language Detected</h3>
+        </div>
+        <p className="text-gray-400 text-sm leading-relaxed mb-6">
+          You are currently using only <span className="text-cream font-semibold">{langLabel}</span>.
+          Do you want to add more languages for a better customer experience?
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onAddLanguages}
+            className="flex-1 px-4 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
+          >
+            Add Languages
+          </button>
+          <button
+            onClick={onContinue}
+            className="flex-1 px-4 py-2.5 border border-dark-border text-gray-400 hover:text-cream text-sm font-semibold rounded-xl transition-colors duration-200"
+          >
+            Continue Anyway
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Dashboard Page ──────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -959,6 +1004,7 @@ export default function Dashboard() {
   // Language settings
   const [enabledLangCodes, setEnabledLangCodes] = useState(['en']);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [showLangWarning, setShowLangWarning] = useState(false);
 
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
     enabledLangCodes.includes(l.code)
@@ -1049,7 +1095,11 @@ export default function Dashboard() {
           <button
             onClick={() => {
               setEditItem(null);
-              setShowAddModal(true);
+              if (enabledLangCodes.length === 1) {
+                setShowLangWarning(true);
+              } else {
+                setShowAddModal(true);
+              }
             }}
             className="flex items-center gap-2 bg-gold hover:bg-gold-light text-dark text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors duration-200"
           >
@@ -1060,6 +1110,55 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* ── Menu Language Settings ── */}
+        <div id="lang-settings-top" className="mb-8 border-b border-dark-border pb-8">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-8 h-px bg-gold/40" />
+            <h2 className="font-serif text-2xl text-gold">Menu Languages</h2>
+          </div>
+          <p className="text-gray-600 text-xs uppercase tracking-widest mb-5 ml-12">
+            Select which languages your menu items must be filled in
+          </p>
+
+          <div className="flex flex-wrap gap-2 mb-5">
+            {SUPPORTED_LANGUAGES.map((l) => {
+              const active = enabledLangCodes.includes(l.code);
+              return (
+                <button
+                  key={l.code}
+                  onClick={() => toggleLang(l.code)}
+                  className={`px-4 py-2 rounded-xl border text-xs font-semibold uppercase tracking-widest transition-all duration-200 ${
+                    active
+                      ? 'bg-gold/20 border-gold/50 text-gold'
+                      : 'border-dark-border text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={saveLanguageSettings}
+              className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
+            >
+              Save Languages
+            </button>
+            {settingsSaved && (
+              <motion.span
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-emerald-400 text-sm"
+              >
+                ✓ Saved
+              </motion.span>
+            )}
+          </div>
+        </div>
+
         {/* ── Filter tabs ── */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-8">
           {['All', ...CATEGORIES].map((cat) => (
@@ -1163,58 +1262,25 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ── Menu Language Settings ── */}
-        <div className="mt-16 border-t border-dark-border pt-10">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-8 h-px bg-gold/40" />
-            <h2 className="font-serif text-2xl text-gold">Menu Languages</h2>
-          </div>
-          <p className="text-gray-600 text-xs uppercase tracking-widest mb-5 ml-12">
-            Select which languages your menu items must be filled in
-          </p>
-
-          <div className="flex flex-wrap gap-2 mb-5">
-            {SUPPORTED_LANGUAGES.map((l) => {
-              const active = enabledLangCodes.includes(l.code);
-              return (
-                <button
-                  key={l.code}
-                  onClick={() => toggleLang(l.code)}
-                  className={`px-4 py-2 rounded-xl border text-xs font-semibold uppercase tracking-widest transition-all duration-200 ${
-                    active
-                      ? 'bg-gold/20 border-gold/50 text-gold'
-                      : 'border-dark-border text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  {l.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={saveLanguageSettings}
-              className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
-            >
-              Save Languages
-            </button>
-            {settingsSaved && (
-              <motion.span
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-emerald-400 text-sm"
-              >
-                ✓ Saved
-              </motion.span>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* ── Modals ── */}
       <AnimatePresence>
+        {showLangWarning && (
+          <LangWarningModal
+            key="lang-warning"
+            singleLang={enabledLangs[0]}
+            onAddLanguages={() => {
+              setShowLangWarning(false);
+              document.getElementById('lang-settings-top')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            onContinue={() => {
+              setShowLangWarning(false);
+              setShowAddModal(true);
+            }}
+          />
+        )}
+
         {showAddModal && (
           <ItemFormModal
             key="form"
