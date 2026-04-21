@@ -10,6 +10,10 @@ const restaurantSettingsSchema = new mongoose.Schema(
         message: 'At least one language must be selected',
       },
     },
+    categories: {
+      type: [String],
+      default: ['main'],
+    },
   },
   { timestamps: true }
 );

@@ -17,10 +17,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /settings — save languages (always succeeds) + return non-blocking warnings
+// PUT /settings — save languages + optional categories; returns non-blocking warnings
 router.put('/', async (req, res) => {
   try {
-    const { languages } = req.body;
+    const { languages, categories: selectedCategories } = req.body;
     if (!Array.isArray(languages) || languages.length === 0) {
       return res.status(400).json({ message: 'At least one language is required' });
     }
@@ -28,10 +28,16 @@ router.put('/', async (req, res) => {
     // Deduplicate and always ensure 'en' is represented
     const unique = [...new Set(languages)];
 
-    // Save languages — never blocked
+    const updatePayload = { languages: unique };
+    if (Array.isArray(selectedCategories)) {
+      const cats = [...new Set(selectedCategories)].filter((c) => c !== 'all');
+      updatePayload.categories = cats.length ? cats : ['main'];
+    }
+
+    // Save settings — never blocked
     const settings = await RestaurantSettings.findOneAndUpdate(
       {},
-      { languages: unique },
+      updatePayload,
       { upsert: true, new: true, runValidators: true }
     );
 
@@ -55,10 +61,10 @@ router.put('/', async (req, res) => {
     }
 
     // Non-blocking validation: detect categories missing translations
-    const categories = await Category.find();
+    const dbCategories = await Category.find();
     const missingCategoryTranslations = [];
 
-    for (const cat of categories) {
+    for (const cat of dbCategories) {
       const missing = [];
       for (const lang of unique) {
         if (!cat.name.get(lang)) missing.push(`name.${lang}`);
@@ -80,10 +86,11 @@ router.put('/', async (req, res) => {
         missingTranslations,
         missingCategoryTranslations,
         languages: settings.languages,
+        categories: settings.categories,
       });
     }
 
-    res.json({ success: true, warning: false, languages: settings.languages });
+    res.json({ success: true, warning: false, languages: settings.languages, categories: settings.categories });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const discountSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
+    translations: { type: Map, of: String, default: {} },
     percentage: { type: Number, required: true, min: 0, max: 100 },
     appliesTo: { type: String, default: 'Everyone', trim: true },
     startTime: { type: Date, required: true },

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { fetchMenu, resolveImage } from '../api/menu';
 import { fetchDiscounts } from '../api/discounts';
-import { fetchCategories } from '../api/categories';
+import { fetchSettings } from '../api/settings';
 import { useLanguage } from '../context/LanguageContext';
 
 /** Resolves a multilingual field to a string for the given language code. */
@@ -68,12 +68,12 @@ function fmtTime(dt) {
 }
 
 // ─── Countdown hook ──────────────────────────────────────────────────────────
-function useCountdown(endTime) {
+function useCountdown(endTime, expiredLabel = 'Expired') {
   const [remaining, setRemaining] = useState('');
   useEffect(() => {
     const tick = () => {
       const diff = new Date(endTime) - new Date();
-      if (diff <= 0) { setRemaining('Expired'); return; }
+      if (diff <= 0) { setRemaining(expiredLabel); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -92,12 +92,13 @@ function useCountdown(endTime) {
 
 // ─── Global Discount Banner ──────────────────────────────────────────────────
 function DiscountBanner({ discount, index }) {
-  const { t } = useLanguage();
-  const countdown = useCountdown(discount.endTime);
+  const { t, lang } = useLanguage();
+  const countdown = useCountdown(discount.endTime, t.expired);
+  const displayTitle = discount.translations?.[lang] || discount.translations?.en || discount.title;
   const forLabel =
     discount.appliesTo === 'Everyone' || !discount.appliesTo
-      ? 'For Everyone'
-      : `For ${discount.appliesTo}`;
+      ? t.forEveryone
+      : `${t.for} ${discount.appliesTo}`;
 
   return (
     <motion.div
@@ -137,7 +138,7 @@ function DiscountBanner({ discount, index }) {
             🎉
           </motion.span>
           <div>
-            <p className="font-serif text-xl text-cream leading-snug">{discount.title}</p>
+            <p className="font-serif text-xl text-cream leading-snug">{displayTitle}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold/70 bg-gold/10 border border-gold/20 px-2.5 py-0.5 rounded-full">
                 👥 {forLabel}
@@ -187,6 +188,7 @@ function SpecialOfferCard({ item, activeGlobalDiscount }) {
   const newPrice = pct ? discountedPrice(item.price, pct) : item.price;
   const isGlobal = discount?.source === 'global';
   const title = typeof item.title === 'string' ? item.title : item.title?.[lang] || item.title?.en;
+  const discountTitle = discount?.translations?.[lang] || discount?.translations?.en || discount?.title;
 
   return (
     <motion.div
@@ -198,7 +200,7 @@ function SpecialOfferCard({ item, activeGlobalDiscount }) {
     >
       {/* Badge — context-aware */}
       <div className="absolute top-3 left-3 z-10 bg-gold text-dark text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg">
-        {isGlobal ? `🎉 ${discount.title}` : `🔥 ${t.sale}`}
+        {isGlobal ? `🎉 ${discountTitle}` : `🔥 ${t.sale}`}
       </div>
 
       <div className="aspect-[4/3] overflow-hidden">
@@ -219,7 +221,7 @@ function SpecialOfferCard({ item, activeGlobalDiscount }) {
         {/* "For [group]" label when sourced from a global discount */}
         {isGlobal && (
           <p className="text-gold/60 text-[10px] uppercase tracking-widest mb-2">
-            For {discount.appliesTo === 'Everyone' || !discount.appliesTo ? 'Everyone' : discount.appliesTo}
+            {discount.appliesTo === 'Everyone' || !discount.appliesTo ? t.forEveryone : `${t.for} ${discount.appliesTo}`}
           </p>
         )}
         <div className="flex items-center gap-2">
@@ -248,6 +250,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
   const pct       = discount?.percentage ?? null;
   const newPrice  = pct ? discountedPrice(item.price, pct) : null;
   const isGlobal  = discount?.source === 'global';
+  const discountTitle = discount?.translations?.[lang] || discount?.translations?.en || discount?.title;
 
   const imgVariant = {
     hidden: { x: isEven ? -80 : 80, opacity: 0 },
@@ -304,7 +307,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             className="absolute top-4 left-4 bg-gold text-dark text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg"
           >
-            {isGlobal ? `🎉 ${discount.title}` : `🔥 -${pct}% ${t.off}`}
+            {isGlobal ? `🎉 ${discountTitle}` : `🔥 -${pct}% ${t.off}`}
           </motion.div>
         )}
       </motion.div>
@@ -343,10 +346,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
             {isGlobal && (
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold/70 bg-gold/10 border border-gold/20 px-2.5 py-1 rounded-full">
-                  🎉 {discount.title} · For{' '}
-                  {discount.appliesTo === 'Everyone' || !discount.appliesTo
-                    ? 'Everyone'
-                    : discount.appliesTo}
+                  🎉 {discountTitle} · {discount.appliesTo === 'Everyone' || !discount.appliesTo ? t.forEveryone : `${t.for} ${discount.appliesTo}`}
                 </span>
               </div>
             )}
@@ -462,20 +462,14 @@ const POLL_INTERVAL = 15000; // 15 s — balance between freshness and requests
 export default function CustomerMenu() {
   const [menuItems, setMenuItems] = useState([]);
   const [discounts, setDiscounts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [activeTab, setActiveTab] = useState('All');
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // Increments every 10 s to force re-evaluation of time-based discount logic
   // even when the fetched data hasn't changed (discount becomes active/expired).
   const [tick, setTick] = useState(0);
   const { t, lang, refreshSettings } = useLanguage();
-
-  // Returns the localized display name for a category's English key
-  const getCategoryName = (englishKey) => {
-    const cat = categories.find((c) => c.name.en === englishKey);
-    return cat ? (cat.name[lang] || cat.name.en) : englishKey;
-  };
 
   useEffect(() => {
     // ── Fetch helpers ──────────────────────────────────────────────────────
@@ -489,15 +483,18 @@ export default function CustomerMenu() {
         .then((res) => setDiscounts(res.data))
         .catch(() => {}); // silent — discount failure must not break the menu
 
-    const loadCategories = () =>
-      fetchCategories()
-        .then((res) => setCategories(res.data))
+    const loadSettings = () =>
+      fetchSettings()
+        .then((res) => {
+          const cats = res.data.categories;
+          setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
+        })
         .catch(() => {});
 
     // ── Initial load ───────────────────────────────────────────────────────
     loadMenu();
     loadDiscounts();
-    loadCategories();
+    loadSettings();
 
     // ── Poll every 15 s (picks up newly created / updated discounts) ───────
     const pollId = setInterval(() => {
@@ -511,7 +508,7 @@ export default function CustomerMenu() {
       if (document.visibilityState === 'visible') {
         loadMenu();
         loadDiscounts();
-        loadCategories();
+        loadSettings();
         refreshSettings();
       }
     };
@@ -527,9 +524,8 @@ export default function CustomerMenu() {
     };
   }, []);
 
-  // Category keys (English names, used for matching item.category)
-  const categoryKeys = categories.map((c) => c.name.en);
-  const ALL_TABS = ['All', ...categoryKeys];
+  // 'all' is always first and never stored in DB
+  const ALL_TABS = ['all', ...selectedCategories];
 
   // Single active global discount — recomputed on every tick so time-window
   // transitions (active → expired, upcoming → active) are caught without a fetch.
@@ -547,7 +543,7 @@ export default function CustomerMenu() {
   );
 
   // Group items by category — discounted items float to top
-  const visibleCategories = activeTab === 'All' ? categoryKeys : [activeTab];
+  const visibleCategories = activeTab === 'all' ? selectedCategories : [activeTab];
 
   const grouped = visibleCategories.reduce((acc, cat) => {
     const items = menuItems
@@ -595,8 +591,7 @@ export default function CustomerMenu() {
             {t.hero.tagline}
           </p>
           <h1 className="font-serif text-7xl md:text-9xl text-cream leading-none mb-6">
-            Our{' '}
-            <em className="text-gold not-italic">{t.menu}</em>
+            {t.heroTitle}
           </h1>
           <p className="text-gray-400 max-w-sm mx-auto text-base leading-relaxed">
             {t.hero.subtitle}
@@ -637,7 +632,7 @@ export default function CustomerMenu() {
             >
               <div className="w-8 h-px bg-gold/40" />
               <span className="text-gold text-xs uppercase tracking-[0.35em] font-semibold">
-                Current Promotions
+                {t.currentPromotions}
               </span>
               <div className="flex-1 h-px bg-gold/10" />
               <motion.span
@@ -700,7 +695,7 @@ export default function CustomerMenu() {
                   activeTab === tab ? 'text-gold' : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                {tab === 'All' ? t.all : getCategoryName(tab)}
+                {t[tab] || tab}
                 {activeTab === tab && (
                   <motion.span
                     layoutId="categoryUnderline"
@@ -739,12 +734,12 @@ export default function CustomerMenu() {
               transition={{ duration: 0.4 }}
             >
               {Object.entries(grouped).map(([cat, items]) => (
-                <section key={cat} id={cat.replace(' ', '-')}>
-                  <CategoryHeading displayName={getCategoryName(cat)} />
+                <section key={cat} id={cat}>
+                  <CategoryHeading displayName={t[cat] || cat} />
                   {items.map((item, idx) => (
                     <MenuItemCard
                       key={item._id}
-                      item={{ ...item, _categoryDisplayName: getCategoryName(item.category) }}
+                      item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
                       index={idx}
                       activeGlobalDiscount={activeGlobalDiscount}
                     />
@@ -774,9 +769,9 @@ export default function CustomerMenu() {
         </div>
         <p className="font-serif text-3xl text-gold mb-2">Luxe Kitchen</p>
         <p className="text-gray-500 text-sm tracking-widest uppercase">
-          Authentic Flavors · Crafted With Love
+          {t.footerTagline}
         </p>
-        <p className="text-gray-700 text-xs mt-8">© 2024 Luxe Kitchen. All rights reserved.</p>
+        <p className="text-gray-700 text-xs mt-8">{t.footerRights}</p>
       </footer>
     </div>
   );

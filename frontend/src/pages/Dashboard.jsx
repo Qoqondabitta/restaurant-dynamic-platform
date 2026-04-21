@@ -14,14 +14,9 @@ import {
   deleteDiscount,
 } from '../api/discounts';
 import { fetchSettings, updateSettings } from '../api/settings';
-import {
-  fetchCategories,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-} from '../api/categories';
 import { useLanguage } from '../context/LanguageContext';
 import { LANGUAGES } from '../config/languages';
+import { DEFAULT_CATEGORIES, CATEGORY_ICONS } from '../config/categories';
 
 const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -62,7 +57,7 @@ const EMPTY_FORM = {
   ingredients: {},
   price: '',
   currency: 'USD',
-  category: 'Main Dishes',
+  category: 'main',
   image: null,
   imageUrl: '',
 };
@@ -78,6 +73,8 @@ const EMPTY_DISCOUNT = {
   isActive: true,
   categories: [],
   items: [],
+  translations: {},
+  showTranslations: false,
 };
 
 // ─── Input styles ────────────────────────────────────────────────────────────
@@ -85,7 +82,7 @@ const inputCls =
   'w-full bg-dark border border-dark-border rounded-lg px-4 py-2.5 text-cream text-sm focus:outline-none focus:border-gold/50 transition-colors placeholder-gray-600';
 
 // ─── Item Form Modal (Add / Edit) ────────────────────────────────────────────
-function ItemFormModal({ editItem, enabledLangs, categories, onClose, onSaved }) {
+function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_FORM);
   const [langTab, setLangTab] = useState(enabledLangs?.[0]?.code || 'en');
@@ -337,9 +334,9 @@ function ItemFormModal({ editItem, enabledLangs, categories, onClose, onSaved })
               onChange={handleChange}
               className={inputCls}
             >
-              {(categories || []).map((cat) => (
-                <option key={cat.name.en} value={cat.name.en}>
-                  {cat.name.en}
+              {DEFAULT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {t[cat] || cat}
                 </option>
               ))}
             </select>
@@ -445,14 +442,16 @@ function DeleteModal({ item, onClose, onConfirm }) {
 }
 
 // ─── Discount Form Modal ─────────────────────────────────────────────────────
-function DiscountFormModal({ editDiscount, menuItems, categories, onClose, onSaved }) {
+function DiscountFormModal({ editDiscount, menuItems, enabledLangCodes, onClose, onSaved }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_DISCOUNT);
+  const enabledLangs = SUPPORTED_LANGUAGES.filter((l) => enabledLangCodes?.includes(l.code));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (editDiscount) {
+      const translationsObj = Object.fromEntries(editDiscount.translations || {});
       setForm({
         title: editDiscount.title,
         percentage: editDiscount.percentage,
@@ -464,6 +463,8 @@ function DiscountFormModal({ editDiscount, menuItems, categories, onClose, onSav
         isActive: editDiscount.isActive,
         categories: editDiscount.categories ?? [],
         items: (editDiscount.items ?? []).map((id) => String(id)),
+        translations: translationsObj,
+        showTranslations: Object.keys(translationsObj).length > 0,
       });
     }
   }, [editDiscount]);
@@ -486,6 +487,7 @@ function DiscountFormModal({ editDiscount, menuItems, categories, onClose, onSav
       isActive: form.isActive,
       categories: form.categories,
       items: form.items,
+      translations: form.translations,
     };
     try {
       if (editDiscount) {
@@ -541,6 +543,46 @@ function DiscountFormModal({ editDiscount, menuItems, categories, onClose, onSav
               className={inputCls}
             />
           </div>
+
+          {/* Optional per-language display name */}
+          {enabledLangs.length > 1 && (
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer mb-3">
+                <input
+                  type="checkbox"
+                  checked={form.showTranslations}
+                  onChange={() => setForm((p) => ({ ...p, showTranslations: !p.showTranslations }))}
+                  className="accent-gold"
+                />
+                <span className="text-xs text-gray-400 uppercase tracking-widest">
+                  {t.translateDiscount}
+                </span>
+              </label>
+              {form.showTranslations && (
+                <div className="space-y-3">
+                  {enabledLangs.filter((l) => l.code !== 'en').map((l) => (
+                    <div key={l.code}>
+                      <label className="block text-xs text-gray-400 uppercase tracking-widest mb-1.5">
+                        {t.discountDisplayName} — {l.label}
+                      </label>
+                      <input
+                        type="text"
+                        value={form.translations[l.code] || ''}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            translations: { ...p.translations, [l.code]: e.target.value },
+                          }))
+                        }
+                        placeholder={`e.g. discount name in ${l.label}`}
+                        className={inputCls}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
@@ -648,8 +690,7 @@ function DiscountFormModal({ editDiscount, menuItems, categories, onClose, onSav
                 Categories
               </label>
               <div className="flex flex-wrap gap-2">
-                {(categories || []).map((catObj) => {
-                  const cat = catObj.name.en;
+                {DEFAULT_CATEGORIES.map((cat) => {
                   const selected = form.categories.includes(cat);
                   return (
                     <button
@@ -669,7 +710,7 @@ function DiscountFormModal({ editDiscount, menuItems, categories, onClose, onSav
                           : 'border border-dark-border text-gray-500 hover:text-gray-300'
                       }`}
                     >
-                      {cat}
+                      {CATEGORY_ICONS[cat]} {t[cat] || cat}
                     </button>
                   );
                 })}
@@ -1037,127 +1078,11 @@ function LangWarningModal({ singleLang, onAddLanguages, onContinue }) {
   );
 }
 
-// ─── Category Form Modal ─────────────────────────────────────────────────────
-function CategoryFormModal({ editCategory, enabledLangCodes, onClose, onSaved }) {
-  const [names, setNames] = useState({});
-  const [langTab, setLangTab] = useState('en');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const enabledLangs = SUPPORTED_LANGUAGES.filter((l) => enabledLangCodes.includes(l.code));
-
-  useEffect(() => {
-    if (editCategory) {
-      setNames({ ...editCategory.name });
-    } else {
-      setNames({});
-    }
-    setLangTab('en');
-  }, [editCategory]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!names.en?.trim()) { setError('English category name is required'); return; }
-    setSubmitting(true);
-    try {
-      if (editCategory) {
-        await updateCategory(editCategory._id, { name: names });
-      } else {
-        await createCategory({ name: names });
-      }
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-    >
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        className="relative w-full max-w-md bg-dark-card border border-gold/20 rounded-2xl overflow-hidden shadow-2xl"
-        initial={{ scale: 0.92, y: 24, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.92, y: 24, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-      >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-dark-border">
-          <h2 className="font-serif text-2xl text-gold">
-            {editCategory ? 'Edit Category' : 'Add Category'}
-          </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-cream text-xl transition-colors">✕</button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Language tabs */}
-          {enabledLangs.length > 1 && (
-            <div className="flex flex-wrap gap-1.5">
-              {enabledLangs.map((l) => (
-                <button
-                  key={l.code} type="button" onClick={() => setLangTab(l.code)}
-                  className={`text-[10px] px-2.5 py-1 rounded-lg border font-semibold uppercase tracking-wide transition-colors ${
-                    langTab === l.code
-                      ? 'bg-gold/20 border-gold/40 text-gold'
-                      : 'border-dark-border text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-              Category Name
-              <span className="ml-2 text-gold/60 text-[10px] normal-case tracking-normal font-normal">
-                — {enabledLangs.find(l => l.code === langTab)?.label || 'English'}
-                {langTab === 'en' ? ' (required)' : ' (optional)'}
-              </span>
-            </label>
-            <input
-              type="text"
-              value={names[langTab] || ''}
-              onChange={(e) => setNames((p) => ({ ...p, [langTab]: e.target.value }))}
-              required={langTab === 'en'}
-              placeholder={langTab === 'en' ? 'e.g. Drinks' : `Name in ${enabledLangs.find(l => l.code === langTab)?.label || langTab}`}
-              className="w-full bg-dark border border-dark-border rounded-lg px-4 py-2.5 text-cream text-sm focus:outline-none focus:border-gold/50 transition-colors placeholder-gray-600"
-            />
-          </div>
-
-          {error && (
-            <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>
-          )}
-
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-3 border border-dark-border text-gray-400 rounded-xl hover:bg-white/5 transition-colors text-sm">
-              Cancel
-            </button>
-            <button type="submit" disabled={submitting}
-              className="flex-1 py-3 bg-gold hover:bg-gold-light text-dark font-semibold rounded-xl transition-colors text-sm disabled:opacity-50">
-              {submitting ? 'Saving…' : editCategory ? 'Update' : 'Add Category'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 // ─── Dashboard Page ──────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { t, setAllowedLanguages } = useLanguage();
   const [items, setItems] = useState([]);
   const [discounts, setDiscounts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1173,10 +1098,9 @@ export default function Dashboard() {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [translationWarnings, setTranslationWarnings] = useState([]);
   const langDropdownRef = useRef(null);
-  // Category management
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [editCategoryItem, setEditCategoryItem] = useState(null);
-  const [categoryDeleteError, setCategoryDeleteError] = useState('');
+  // Category selection
+  const [selectedCategories, setSelectedCategories] = useState(['main']);
+  const [categoriesSaved, setCategoriesSaved] = useState(false);
 
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
     enabledLangCodes.includes(l.code)
@@ -1184,16 +1108,16 @@ export default function Dashboard() {
 
   const loadAll = async () => {
     try {
-      const [menuRes, discountRes, settingsRes, catRes] = await Promise.all([
+      const [menuRes, discountRes, settingsRes] = await Promise.all([
         fetchMenu(),
         fetchDiscounts(),
         fetchSettings(),
-        fetchCategories(),
       ]);
       setItems(menuRes.data);
       setDiscounts(discountRes.data);
       setEnabledLangCodes(settingsRes.data.languages || ['en']);
-      setCategories(catRes.data);
+      const cats = settingsRes.data.categories;
+      setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1227,6 +1151,25 @@ export default function Dashboard() {
         }
         if (warnings.length > 0) setTranslationWarnings(warnings);
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const toggleCategory = (cat) => {
+    setCategoriesSaved(false);
+    setSelectedCategories((prev) =>
+      prev.includes(cat)
+        ? prev.length > 1 ? prev.filter((c) => c !== cat) : prev // keep at least 1
+        : [...prev, cat]
+    );
+  };
+
+  const saveCategories = async () => {
+    try {
+      await updateSettings({ languages: enabledLangCodes, categories: selectedCategories });
+      setCategoriesSaved(true);
+      setTimeout(() => setCategoriesSaved(false), 3000);
     } catch (err) {
       console.error(err);
     }
@@ -1272,8 +1215,7 @@ export default function Dashboard() {
       ? items
       : items.filter((i) => i.category === activeFilter);
 
-  const categoryKeys = categories.map((c) => c.name.en);
-  const filterCounts = ['All', ...categoryKeys].reduce((acc, cat) => {
+  const filterCounts = ['All', ...selectedCategories].reduce((acc, cat) => {
     acc[cat] =
       cat === 'All' ? items.length : items.filter((i) => i.category === cat).length;
     return acc;
@@ -1312,10 +1254,10 @@ export default function Dashboard() {
         <div id="lang-settings-top" className="mb-8 border-b border-dark-border pb-8">
           <div className="flex items-center gap-4 mb-2">
             <div className="w-8 h-px bg-gold/40" />
-            <h2 className="font-serif text-2xl text-gold">Menu Languages</h2>
+            <h2 className="font-serif text-2xl text-gold">{t.menuLanguages}</h2>
           </div>
           <p className="text-gray-600 text-xs uppercase tracking-widest mb-5 ml-12">
-            Select which languages your menu items must be filled in
+            {t.langSettingsSubtitle}
           </p>
 
           {/* Multi-select language dropdown */}
@@ -1392,7 +1334,7 @@ export default function Dashboard() {
               onClick={saveLanguageSettings}
               className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
             >
-              Save Languages
+              {t.saveLanguages}
             </button>
             {settingsSaved && (
               <motion.span
@@ -1401,7 +1343,7 @@ export default function Dashboard() {
                 exit={{ opacity: 0 }}
                 className="text-emerald-400 text-sm"
               >
-                ✓ Saved
+                ✓ {t.saved}
               </motion.span>
             )}
           </div>
@@ -1409,68 +1351,67 @@ export default function Dashboard() {
 
         {/* ── Menu Categories Section ── */}
         <div className="mb-8 border-b border-dark-border pb-8">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-px bg-gold/40" />
-              <h2 className="font-serif text-2xl text-gold">Menu Categories</h2>
-            </div>
-            <button
-              onClick={() => { setEditCategoryItem(null); setShowCategoryModal(true); }}
-              className="flex items-center gap-2 border border-gold/40 text-gold text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gold/10 transition-colors uppercase tracking-widest"
-            >
-              <span>+</span> Add Category
-            </button>
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-8 h-px bg-gold/40" />
+            <h2 className="font-serif text-2xl text-gold">{t.menuCategories}</h2>
+          </div>
+          <p className="text-gray-600 text-xs uppercase tracking-widest mb-5 ml-12">
+            {t.categorySettingsSubtitle}
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-5">
+            {DEFAULT_CATEGORIES.map((cat) => {
+              const checked = selectedCategories.includes(cat);
+              return (
+                <label
+                  key={cat}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-150 select-none ${
+                    checked
+                      ? 'bg-gold/10 border-gold/40 text-gold'
+                      : 'border-dark-border text-gray-500 hover:border-gold/20 hover:text-gray-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleCategory(cat)}
+                    className="sr-only"
+                  />
+                  <span className="text-base leading-none">{CATEGORY_ICONS[cat]}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide truncate">
+                    {t[cat] || cat}
+                  </span>
+                  {checked && (
+                    <span className="ml-auto text-gold text-[10px] font-bold leading-none">✓</span>
+                  )}
+                </label>
+              );
+            })}
           </div>
 
-          {categoryDeleteError && (
-            <motion.p
-              initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-              className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2 mb-4"
+          <div className="flex items-center gap-4">
+            <button
+              onClick={saveCategories}
+              className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
             >
-              {categoryDeleteError}
-            </motion.p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <div
-                key={cat._id}
-                className="flex items-center gap-2 bg-dark border border-dark-border rounded-xl px-4 py-2.5 hover:border-gold/20 transition-colors group"
+              {t.saveCategories}
+            </button>
+            {categoriesSaved && (
+              <motion.span
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-emerald-400 text-sm"
               >
-                <span className="text-cream text-sm">{cat.name.en}</span>
-                <button
-                  onClick={() => { setEditCategoryItem(cat); setCategoryDeleteError(''); setShowCategoryModal(true); }}
-                  className="text-gray-600 hover:text-gold transition-colors text-xs leading-none"
-                  title="Edit"
-                >
-                  ✎
-                </button>
-                <button
-                  onClick={async () => {
-                    setCategoryDeleteError('');
-                    try {
-                      await deleteCategory(cat._id);
-                      await loadAll();
-                    } catch (err) {
-                      setCategoryDeleteError(err.response?.data?.message || 'Could not delete category');
-                    }
-                  }}
-                  className="text-gray-600 hover:text-red-400 transition-colors text-xs leading-none"
-                  title="Delete"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            {categories.length === 0 && (
-              <p className="text-gray-600 text-sm font-serif">No categories yet.</p>
+                ✓ {t.saved}
+              </motion.span>
             )}
           </div>
         </div>
 
         {/* ── Filter tabs ── */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-8">
-          {['All', ...categoryKeys].map((cat) => (
+          {['All', ...selectedCategories].map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveFilter(cat)}
@@ -1480,8 +1421,8 @@ export default function Dashboard() {
                   : 'border-dark-border bg-dark-card text-gray-500 hover:border-gold/20 hover:text-gray-300'
               }`}
             >
-              <span className="block text-xl font-light mb-0.5">{filterCounts[cat]}</span>
-              {cat === 'All' ? 'All' : cat}
+              <span className="block text-xl font-light mb-0.5">{filterCounts[cat] ?? 0}</span>
+              {cat === 'All' ? t.all : (t[cat] || cat)}
             </button>
           ))}
         </div>
@@ -1603,7 +1544,6 @@ export default function Dashboard() {
             key="form"
             editItem={editItem}
             enabledLangs={enabledLangs}
-            categories={categories}
             onClose={() => {
               setShowAddModal(false);
               setEditItem(null);
@@ -1626,21 +1566,11 @@ export default function Dashboard() {
             key="discount-form"
             editDiscount={editDiscount}
             menuItems={items}
-            categories={categories}
+            enabledLangCodes={enabledLangCodes}
             onClose={() => {
               setShowDiscountModal(false);
               setEditDiscount(null);
             }}
-            onSaved={loadAll}
-          />
-        )}
-
-        {showCategoryModal && (
-          <CategoryFormModal
-            key="category-form"
-            editCategory={editCategoryItem}
-            enabledLangCodes={enabledLangCodes}
-            onClose={() => { setShowCategoryModal(false); setEditCategoryItem(null); }}
             onSaved={loadAll}
           />
         )}
