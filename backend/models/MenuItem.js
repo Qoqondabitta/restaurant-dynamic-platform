@@ -12,7 +12,6 @@ const menuItemSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ['Drinks', 'Main Dishes', 'Salads', 'Soups', 'Desserts'],
     },
     ingredients: { type: Map, of: String, required: true },
     image: { type: String, required: true },

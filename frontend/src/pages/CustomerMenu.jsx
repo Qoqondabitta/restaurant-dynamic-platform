@@ -2,26 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { fetchMenu, resolveImage } from '../api/menu';
 import { fetchDiscounts } from '../api/discounts';
-import { fetchSettings } from '../api/settings';
+import { fetchCategories } from '../api/categories';
 import { useLanguage } from '../context/LanguageContext';
-
-const languageOptions = {
-  en: { label: 'ENG', flag: '🇬🇧' },
-  ru: { label: 'RUS', flag: '🇷🇺' },
-  uz: { label: 'UZB', flag: '🇺🇿' },
-  pl: { label: 'PL',  flag: '🇵🇱' },
-  es: { label: 'ES',  flag: '🇪🇸' },
-  tr: { label: 'TR',  flag: '🇹🇷' },
-  ar: { label: 'AR',  flag: '🇸🇦' },
-  zh: { label: 'ZH',  flag: '🇨🇳' },
-  ja: { label: 'JA',  flag: '🇯🇵' },
-  ko: { label: 'KO',  flag: '🇰🇷' },
-  pt: { label: 'PT',  flag: '🇵🇹' },
-  fr: { label: 'FR',  flag: '🇫🇷' },
-  it: { label: 'IT',  flag: '🇮🇹' },
-};
-
-const CATEGORIES = ['Drinks', 'Main Dishes', 'Salads', 'Soups', 'Desserts'];
 
 /** Resolves a multilingual field to a string for the given language code. */
 function itemText(field, lang) {
@@ -198,9 +180,8 @@ function DiscountBanner({ discount, index }) {
 }
 
 // ─── Special Offers Card ─────────────────────────────────────────────────────
-function SpecialOfferCard({ item, activeGlobalDiscount, menuLang }) {
-  const { t } = useLanguage();
-  const lang = menuLang || 'en';
+function SpecialOfferCard({ item, activeGlobalDiscount }) {
+  const { t, lang } = useLanguage();
   const discount = getItemDiscount(item, activeGlobalDiscount);
   const pct = discount?.percentage;
   const newPrice = pct ? discountedPrice(item.price, pct) : item.price;
@@ -255,12 +236,11 @@ function SpecialOfferCard({ item, activeGlobalDiscount, menuLang }) {
 }
 
 // ─── Single menu item with alternating slide animation ───────────────────────
-function MenuItemCard({ item, index, activeGlobalDiscount, menuLang }) {
+function MenuItemCard({ item, index, activeGlobalDiscount }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.25 });
   const isEven = index % 2 === 0;
-  const { t } = useLanguage();
-  const lang = menuLang || 'en';
+  const { t, lang } = useLanguage();
   const title = typeof item.title === 'string' ? item.title : item.title?.[lang] || item.title?.en;
   const ingredients = typeof item.ingredients === 'string' ? item.ingredients : item.ingredients?.[lang] || item.ingredients?.en;
 
@@ -335,7 +315,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount, menuLang }) {
         className={`flex flex-col justify-center ${isEven ? 'md:order-2' : 'md:order-1'}`}
       >
         <span className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">
-          {t.categories[item.category] || item.category}
+          {item._categoryDisplayName || item.category}
         </span>
         <h3 className="font-serif text-4xl md:text-5xl text-cream leading-tight mb-4">
           {title}
@@ -389,8 +369,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount, menuLang }) {
 }
 
 // ─── Category section heading ────────────────────────────────────────────────
-function CategoryHeading({ name }) {
-  const { t } = useLanguage();
+function CategoryHeading({ displayName }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -401,7 +380,7 @@ function CategoryHeading({ name }) {
     >
       <div className="w-8 h-px bg-gold/40" />
       <span className="text-gold text-xs uppercase tracking-[0.35em] font-semibold">
-        {t.categories[name] || name}
+        {displayName}
       </span>
       <div className="flex-1 h-px bg-gold/10" />
     </motion.div>
@@ -483,30 +462,20 @@ const POLL_INTERVAL = 15000; // 15 s — balance between freshness and requests
 export default function CustomerMenu() {
   const [menuItems, setMenuItems] = useState([]);
   const [discounts, setDiscounts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // Increments every 10 s to force re-evaluation of time-based discount logic
   // even when the fetched data hasn't changed (discount becomes active/expired).
   const [tick, setTick] = useState(0);
-  const { t } = useLanguage();
+  const { t, lang, refreshSettings } = useLanguage();
 
-  // ── Menu language state (independent from UI language) ────────────────────
-  const [menuLang, setMenuLang] = useState('en');
-  const [allowedLanguages, setAllowedLanguages] = useState(['en']);
-  const [langSwitcherOpen, setLangSwitcherOpen] = useState(false);
-
-  // Part 6: force default to 'en' on first load, then respect allowedLanguages
-  useEffect(() => {
-    fetchSettings()
-      .then((res) => {
-        const langs = res.data.languages || ['en'];
-        setAllowedLanguages(langs);
-        const defaultLang = langs.includes('en') ? 'en' : langs[0];
-        setMenuLang(defaultLang);
-      })
-      .catch(() => {});
-  }, []);
+  // Returns the localized display name for a category's English key
+  const getCategoryName = (englishKey) => {
+    const cat = categories.find((c) => c.name.en === englishKey);
+    return cat ? (cat.name[lang] || cat.name.en) : englishKey;
+  };
 
   useEffect(() => {
     // ── Fetch helpers ──────────────────────────────────────────────────────
@@ -520,9 +489,15 @@ export default function CustomerMenu() {
         .then((res) => setDiscounts(res.data))
         .catch(() => {}); // silent — discount failure must not break the menu
 
+    const loadCategories = () =>
+      fetchCategories()
+        .then((res) => setCategories(res.data))
+        .catch(() => {});
+
     // ── Initial load ───────────────────────────────────────────────────────
     loadMenu();
     loadDiscounts();
+    loadCategories();
 
     // ── Poll every 15 s (picks up newly created / updated discounts) ───────
     const pollId = setInterval(() => {
@@ -531,10 +506,13 @@ export default function CustomerMenu() {
     }, POLL_INTERVAL);
 
     // ── Refetch when the user returns to this tab ──────────────────────────
+    // refreshSettings updates allowedLanguages in context (Navbar picks it up)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         loadMenu();
         loadDiscounts();
+        loadCategories();
+        refreshSettings();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -549,7 +527,9 @@ export default function CustomerMenu() {
     };
   }, []);
 
-  const ALL_TABS = ['All', ...CATEGORIES];
+  // Category keys (English names, used for matching item.category)
+  const categoryKeys = categories.map((c) => c.name.en);
+  const ALL_TABS = ['All', ...categoryKeys];
 
   // Single active global discount — recomputed on every tick so time-window
   // transitions (active → expired, upcoming → active) are caught without a fetch.
@@ -567,7 +547,7 @@ export default function CustomerMenu() {
   );
 
   // Group items by category — discounted items float to top
-  const visibleCategories = activeTab === 'All' ? CATEGORIES : [activeTab];
+  const visibleCategories = activeTab === 'All' ? categoryKeys : [activeTab];
 
   const grouped = visibleCategories.reduce((acc, cat) => {
     const items = menuItems
@@ -701,7 +681,6 @@ export default function CustomerMenu() {
                   key={item._id}
                   item={item}
                   activeGlobalDiscount={activeGlobalDiscount}
-                  menuLang={menuLang}
                 />
               ))}
             </div>
@@ -711,7 +690,7 @@ export default function CustomerMenu() {
 
       {/* ── Sticky Category Nav ── */}
       <nav className="sticky top-16 z-40 bg-dark/95 backdrop-blur-md border-b border-dark-border">
-        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4">
           <div className="flex gap-0 overflow-x-auto scrollbar-hide">
             {ALL_TABS.map((tab) => (
               <button
@@ -721,7 +700,7 @@ export default function CustomerMenu() {
                   activeTab === tab ? 'text-gold' : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                {t.categories[tab] || tab}
+                {tab === 'All' ? t.all : getCategoryName(tab)}
                 {activeTab === tab && (
                   <motion.span
                     layoutId="categoryUnderline"
@@ -732,50 +711,6 @@ export default function CustomerMenu() {
               </button>
             ))}
           </div>
-
-          {/* ── Menu Language Switcher (only if multiple languages allowed) ── */}
-          {allowedLanguages.length > 1 && (
-            <div className="relative flex-shrink-0 ml-4">
-              <button
-                onClick={() => setLangSwitcherOpen((o) => !o)}
-                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-gray-400 hover:text-gold transition-colors duration-200 border border-gold/20 hover:border-gold/50 rounded-lg px-3 py-1.5"
-              >
-                <span>{languageOptions[menuLang]?.flag || '🌐'}</span>
-                <span>{languageOptions[menuLang]?.label || menuLang.toUpperCase()}</span>
-                <span className="text-[10px] opacity-60">▼</span>
-              </button>
-
-              <AnimatePresence>
-                {langSwitcherOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 bg-dark-card border border-gold/20 rounded-xl overflow-hidden shadow-xl min-w-[110px] z-50"
-                  >
-                    {allowedLanguages.map((code) => {
-                      const opt = languageOptions[code] || { label: code.toUpperCase(), flag: '🌐' };
-                      return (
-                        <button
-                          key={code}
-                          onClick={() => { setMenuLang(code); setLangSwitcherOpen(false); }}
-                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors duration-150 ${
-                            menuLang === code
-                              ? 'text-gold bg-gold/10'
-                              : 'text-gray-400 hover:text-cream hover:bg-white/5'
-                          }`}
-                        >
-                          <span>{opt.flag}</span>
-                          <span>{opt.label}</span>
-                        </button>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
         </div>
       </nav>
 
@@ -805,14 +740,13 @@ export default function CustomerMenu() {
             >
               {Object.entries(grouped).map(([cat, items]) => (
                 <section key={cat} id={cat.replace(' ', '-')}>
-                  <CategoryHeading name={cat} />
+                  <CategoryHeading displayName={getCategoryName(cat)} />
                   {items.map((item, idx) => (
                     <MenuItemCard
                       key={item._id}
-                      item={item}
+                      item={{ ...item, _categoryDisplayName: getCategoryName(item.category) }}
                       index={idx}
                       activeGlobalDiscount={activeGlobalDiscount}
-                      menuLang={menuLang}
                     />
                   ))}
                 </section>

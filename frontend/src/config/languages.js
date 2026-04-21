@@ -1,0 +1,15 @@
+export const LANGUAGES = {
+  en: { label: 'ENG', flag: 'https://flagcdn.com/w40/gb.png' },
+  ru: { label: 'RUS', flag: 'https://flagcdn.com/w40/ru.png' },
+  uz: { label: 'UZB', flag: 'https://flagcdn.com/w40/uz.png' },
+  pl: { label: 'POL', flag: 'https://flagcdn.com/w40/pl.png' },
+  es: { label: 'ESP', flag: 'https://flagcdn.com/w40/es.png' },
+  tr: { label: 'TUR', flag: 'https://flagcdn.com/w40/tr.png' },
+  ar: { label: 'ARB', flag: 'https://flagcdn.com/w40/sa.png' },
+  zh: { label: 'CHN', flag: 'https://flagcdn.com/w40/cn.png' },
+  ja: { label: 'JPN', flag: 'https://flagcdn.com/w40/jp.png' },
+  ko: { label: 'KOR', flag: 'https://flagcdn.com/w40/kr.png' },
+  pt: { label: 'POR', flag: 'https://flagcdn.com/w40/pt.png' },
+  fr: { label: 'FRA', flag: 'https://flagcdn.com/w40/fr.png' },
+  it: { label: 'ITA', flag: 'https://flagcdn.com/w40/it.png' },
+};

@@ -7,6 +7,7 @@ require('dotenv').config();
 const menuRoutes = require('./routes/menu');
 const discountRoutes = require('./routes/discounts');
 const settingsRoutes = require('./routes/settings');
+const categoryRoutes = require('./routes/categories');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/menu', menuRoutes);
 app.use('/discounts', discountRoutes);
 app.use('/settings', settingsRoutes);
+app.use('/categories', categoryRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   fetchMenu,
@@ -14,9 +14,14 @@ import {
   deleteDiscount,
 } from '../api/discounts';
 import { fetchSettings, updateSettings } from '../api/settings';
+import {
+  fetchCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from '../api/categories';
 import { useLanguage } from '../context/LanguageContext';
-
-const CATEGORIES = ['Drinks', 'Main Dishes', 'Salads', 'Soups', 'Desserts'];
+import { LANGUAGES } from '../config/languages';
 
 const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -41,14 +46,6 @@ const CURRENCIES = [
   { code: 'UZS', symbol: "so'm" },
   { code: 'PLN', symbol: 'zł' },
 ];
-
-const CATEGORY_TYPE = {
-  Drinks: 'drink',
-  'Main Dishes': 'meal',
-  Salads: 'salad',
-  Soups: 'soup',
-  Desserts: 'dessert',
-};
 
 // Converts a stored UTC date string into the local "YYYY-MM-DDTHH:mm" value
 // needed by <input type="datetime-local">, without shifting to UTC.
@@ -88,7 +85,7 @@ const inputCls =
   'w-full bg-dark border border-dark-border rounded-lg px-4 py-2.5 text-cream text-sm focus:outline-none focus:border-gold/50 transition-colors placeholder-gray-600';
 
 // ─── Item Form Modal (Add / Edit) ────────────────────────────────────────────
-function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
+function ItemFormModal({ editItem, enabledLangs, categories, onClose, onSaved }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_FORM);
   const [langTab, setLangTab] = useState(enabledLangs?.[0]?.code || 'en');
@@ -340,9 +337,9 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
               onChange={handleChange}
               className={inputCls}
             >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {(categories || []).map((cat) => (
+                <option key={cat.name.en} value={cat.name.en}>
+                  {cat.name.en}
                 </option>
               ))}
             </select>
@@ -401,7 +398,7 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
 // ─── Delete Confirmation Modal ────────────────────────────────────────────────
 function DeleteModal({ item, onClose, onConfirm }) {
   const { t } = useLanguage();
-  const type = CATEGORY_TYPE[item?.category] || 'item';
+  const type = item?.category || 'item';
 
   return (
     <motion.div
@@ -448,7 +445,7 @@ function DeleteModal({ item, onClose, onConfirm }) {
 }
 
 // ─── Discount Form Modal ─────────────────────────────────────────────────────
-function DiscountFormModal({ editDiscount, menuItems, onClose, onSaved }) {
+function DiscountFormModal({ editDiscount, menuItems, categories, onClose, onSaved }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_DISCOUNT);
   const [submitting, setSubmitting] = useState(false);
@@ -651,7 +648,8 @@ function DiscountFormModal({ editDiscount, menuItems, onClose, onSaved }) {
                 Categories
               </label>
               <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map((cat) => {
+                {(categories || []).map((catObj) => {
+                  const cat = catObj.name.en;
                   const selected = form.categories.includes(cat);
                   return (
                     <button
@@ -943,6 +941,57 @@ function DiscountRow({ discount, onEdit, onDelete }) {
   );
 }
 
+// ─── Translation Warning Modal ───────────────────────────────────────────────
+function TranslationWarningModal({ warnings, onClose }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+    >
+      <motion.div
+        initial={{ scale: 0.94, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.94, y: 20 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+        className="bg-dark-card border border-dark-border rounded-2xl p-8 max-w-lg w-full shadow-2xl flex flex-col max-h-[80vh]"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">⚠️</span>
+            <h3 className="font-serif text-xl text-gold">Missing Translations</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-cream text-xl leading-none transition-colors">✕</button>
+        </div>
+        <p className="text-gray-400 text-sm leading-relaxed mb-4">
+          Languages saved. Some menu items are missing translations for the newly added languages.
+          You can add them later by editing each item.
+        </p>
+        <div className="overflow-y-auto flex-1 space-y-2 mb-5">
+          {warnings.map((w) => (
+            <div key={w.id} className="bg-dark border border-dark-border rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gold/60 bg-gold/10 border border-gold/20 px-2 py-0.5 rounded-full">
+                  {w.type === 'category' ? 'Category' : 'Item'}
+                </span>
+                <p className="text-cream text-sm font-semibold">{w.name}</p>
+              </div>
+              <p className="text-gray-500 text-xs font-mono">Missing: {w.missing.join(', ')}</p>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
+        >
+          Got it, I'll fix later
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Language Warning Modal ──────────────────────────────────────────────────
 function LangWarningModal({ singleLang, onAddLanguages, onContinue }) {
   const langLabel = singleLang?.label || 'English';
@@ -988,11 +1037,127 @@ function LangWarningModal({ singleLang, onAddLanguages, onContinue }) {
   );
 }
 
+// ─── Category Form Modal ─────────────────────────────────────────────────────
+function CategoryFormModal({ editCategory, enabledLangCodes, onClose, onSaved }) {
+  const [names, setNames] = useState({});
+  const [langTab, setLangTab] = useState('en');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const enabledLangs = SUPPORTED_LANGUAGES.filter((l) => enabledLangCodes.includes(l.code));
+
+  useEffect(() => {
+    if (editCategory) {
+      setNames({ ...editCategory.name });
+    } else {
+      setNames({});
+    }
+    setLangTab('en');
+  }, [editCategory]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!names.en?.trim()) { setError('English category name is required'); return; }
+    setSubmitting(true);
+    try {
+      if (editCategory) {
+        await updateCategory(editCategory._id, { name: names });
+      } else {
+        await createCategory({ name: names });
+      }
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Something went wrong');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        className="relative w-full max-w-md bg-dark-card border border-gold/20 rounded-2xl overflow-hidden shadow-2xl"
+        initial={{ scale: 0.92, y: 24, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.92, y: 24, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+      >
+        <div className="flex items-center justify-between px-6 py-5 border-b border-dark-border">
+          <h2 className="font-serif text-2xl text-gold">
+            {editCategory ? 'Edit Category' : 'Add Category'}
+          </h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-cream text-xl transition-colors">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Language tabs */}
+          {enabledLangs.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              {enabledLangs.map((l) => (
+                <button
+                  key={l.code} type="button" onClick={() => setLangTab(l.code)}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg border font-semibold uppercase tracking-wide transition-colors ${
+                    langTab === l.code
+                      ? 'bg-gold/20 border-gold/40 text-gold'
+                      : 'border-dark-border text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
+              Category Name
+              <span className="ml-2 text-gold/60 text-[10px] normal-case tracking-normal font-normal">
+                — {enabledLangs.find(l => l.code === langTab)?.label || 'English'}
+                {langTab === 'en' ? ' (required)' : ' (optional)'}
+              </span>
+            </label>
+            <input
+              type="text"
+              value={names[langTab] || ''}
+              onChange={(e) => setNames((p) => ({ ...p, [langTab]: e.target.value }))}
+              required={langTab === 'en'}
+              placeholder={langTab === 'en' ? 'e.g. Drinks' : `Name in ${enabledLangs.find(l => l.code === langTab)?.label || langTab}`}
+              className="w-full bg-dark border border-dark-border rounded-lg px-4 py-2.5 text-cream text-sm focus:outline-none focus:border-gold/50 transition-colors placeholder-gray-600"
+            />
+          </div>
+
+          {error && (
+            <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-3 border border-dark-border text-gray-400 rounded-xl hover:bg-white/5 transition-colors text-sm">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting}
+              className="flex-1 py-3 bg-gold hover:bg-gold-light text-dark font-semibold rounded-xl transition-colors text-sm disabled:opacity-50">
+              {submitting ? 'Saving…' : editCategory ? 'Update' : 'Add Category'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Dashboard Page ──────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { t } = useLanguage();
+  const { t, setAllowedLanguages } = useLanguage();
   const [items, setItems] = useState([]);
   const [discounts, setDiscounts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1005,6 +1170,13 @@ export default function Dashboard() {
   const [enabledLangCodes, setEnabledLangCodes] = useState(['en']);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [showLangWarning, setShowLangWarning] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [translationWarnings, setTranslationWarnings] = useState([]);
+  const langDropdownRef = useRef(null);
+  // Category management
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editCategoryItem, setEditCategoryItem] = useState(null);
+  const [categoryDeleteError, setCategoryDeleteError] = useState('');
 
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
     enabledLangCodes.includes(l.code)
@@ -1012,14 +1184,16 @@ export default function Dashboard() {
 
   const loadAll = async () => {
     try {
-      const [menuRes, discountRes, settingsRes] = await Promise.all([
+      const [menuRes, discountRes, settingsRes, catRes] = await Promise.all([
         fetchMenu(),
         fetchDiscounts(),
         fetchSettings(),
+        fetchCategories(),
       ]);
       setItems(menuRes.data);
       setDiscounts(discountRes.data);
       setEnabledLangCodes(settingsRes.data.languages || ['en']);
+      setCategories(catRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1038,9 +1212,21 @@ export default function Dashboard() {
 
   const saveLanguageSettings = async () => {
     try {
-      await updateSettings({ languages: enabledLangCodes });
+      const res = await updateSettings({ languages: enabledLangCodes });
       setSettingsSaved(true);
+      // Sync Navbar immediately — no page reload needed
+      setAllowedLanguages(enabledLangCodes);
       setTimeout(() => setSettingsSaved(false), 3000);
+      if (res.data.warning) {
+        const warnings = [];
+        for (const w of (res.data.missingTranslations || [])) {
+          warnings.push({ type: 'item', id: w.itemId, name: w.itemName, missing: w.missing });
+        }
+        for (const w of (res.data.missingCategoryTranslations || [])) {
+          warnings.push({ type: 'category', id: w.categoryId, name: w.categoryName, missing: w.missing });
+        }
+        if (warnings.length > 0) setTranslationWarnings(warnings);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -1048,6 +1234,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadAll();
+  }, []);
+
+  // Close language dropdown on outside click
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (langDropdownRef.current && !langDropdownRef.current.contains(e.target)) {
+        setLangDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
   const handleDeleteConfirm = async () => {
@@ -1075,7 +1272,8 @@ export default function Dashboard() {
       ? items
       : items.filter((i) => i.category === activeFilter);
 
-  const filterCounts = ['All', ...CATEGORIES].reduce((acc, cat) => {
+  const categoryKeys = categories.map((c) => c.name.en);
+  const filterCounts = ['All', ...categoryKeys].reduce((acc, cat) => {
     acc[cat] =
       cat === 'All' ? items.length : items.filter((i) => i.category === cat).length;
     return acc;
@@ -1120,23 +1318,73 @@ export default function Dashboard() {
             Select which languages your menu items must be filled in
           </p>
 
-          <div className="flex flex-wrap gap-2 mb-5">
-            {SUPPORTED_LANGUAGES.map((l) => {
-              const active = enabledLangCodes.includes(l.code);
-              return (
-                <button
-                  key={l.code}
-                  onClick={() => toggleLang(l.code)}
-                  className={`px-4 py-2 rounded-xl border text-xs font-semibold uppercase tracking-widest transition-all duration-200 ${
-                    active
-                      ? 'bg-gold/20 border-gold/50 text-gold'
-                      : 'border-dark-border text-gray-500 hover:text-gray-300'
-                  }`}
+          {/* Multi-select language dropdown */}
+          <div ref={langDropdownRef} className="relative inline-block mb-5">
+            <button
+              onClick={() => setLangDropdownOpen((o) => !o)}
+              className="flex items-center gap-2 bg-dark border border-dark-border rounded-xl px-4 py-2.5 min-w-[260px] hover:border-gold/30 transition-colors"
+            >
+              <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                {enabledLangCodes.length === 0 ? (
+                  <span className="text-gray-500 text-sm">Select languages…</span>
+                ) : (
+                  enabledLangCodes.map((code) => (
+                    <span
+                      key={code}
+                      className="flex items-center gap-1 bg-gold/10 border border-gold/20 rounded-md px-1.5 py-0.5"
+                    >
+                      <img
+                        src={LANGUAGES[code]?.flag}
+                        alt={code}
+                        className="w-4 h-3 object-cover rounded-sm"
+                      />
+                      <span className="text-gold text-[10px] font-semibold uppercase">
+                        {LANGUAGES[code]?.label || code.toUpperCase()}
+                      </span>
+                    </span>
+                  ))
+                )}
+              </div>
+              <span className="text-gray-500 text-[10px] flex-shrink-0">▼</span>
+            </button>
+
+            <AnimatePresence>
+              {langDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute left-0 top-full mt-2 bg-dark-card border border-dark-border rounded-xl shadow-2xl z-50 w-64 max-h-72 overflow-y-auto"
                 >
-                  {l.label}
-                </button>
-              );
-            })}
+                  {Object.entries(LANGUAGES).map(([code, { label, flag }]) => {
+                    const checked = enabledLangCodes.includes(code);
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => toggleLang(code)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-colors hover:bg-white/5 ${
+                          checked ? 'text-gold' : 'text-gray-400'
+                        }`}
+                      >
+                        <span
+                          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-[10px] font-bold transition-colors ${
+                            checked
+                              ? 'bg-gold/20 border-gold/50 text-gold'
+                              : 'border-dark-border text-transparent'
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        <img src={flag} alt={code} className="w-5 h-4 object-cover rounded-sm flex-shrink-0" />
+                        <span className="font-semibold uppercase tracking-widest">{label}</span>
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="flex items-center gap-4">
@@ -1159,9 +1407,70 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* ── Menu Categories Section ── */}
+        <div className="mb-8 border-b border-dark-border pb-8">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-px bg-gold/40" />
+              <h2 className="font-serif text-2xl text-gold">Menu Categories</h2>
+            </div>
+            <button
+              onClick={() => { setEditCategoryItem(null); setShowCategoryModal(true); }}
+              className="flex items-center gap-2 border border-gold/40 text-gold text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gold/10 transition-colors uppercase tracking-widest"
+            >
+              <span>+</span> Add Category
+            </button>
+          </div>
+
+          {categoryDeleteError && (
+            <motion.p
+              initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+              className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2 mb-4"
+            >
+              {categoryDeleteError}
+            </motion.p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => (
+              <div
+                key={cat._id}
+                className="flex items-center gap-2 bg-dark border border-dark-border rounded-xl px-4 py-2.5 hover:border-gold/20 transition-colors group"
+              >
+                <span className="text-cream text-sm">{cat.name.en}</span>
+                <button
+                  onClick={() => { setEditCategoryItem(cat); setCategoryDeleteError(''); setShowCategoryModal(true); }}
+                  className="text-gray-600 hover:text-gold transition-colors text-xs leading-none"
+                  title="Edit"
+                >
+                  ✎
+                </button>
+                <button
+                  onClick={async () => {
+                    setCategoryDeleteError('');
+                    try {
+                      await deleteCategory(cat._id);
+                      await loadAll();
+                    } catch (err) {
+                      setCategoryDeleteError(err.response?.data?.message || 'Could not delete category');
+                    }
+                  }}
+                  className="text-gray-600 hover:text-red-400 transition-colors text-xs leading-none"
+                  title="Delete"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            {categories.length === 0 && (
+              <p className="text-gray-600 text-sm font-serif">No categories yet.</p>
+            )}
+          </div>
+        </div>
+
         {/* ── Filter tabs ── */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-8">
-          {['All', ...CATEGORIES].map((cat) => (
+          {['All', ...categoryKeys].map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveFilter(cat)}
@@ -1172,7 +1481,7 @@ export default function Dashboard() {
               }`}
             >
               <span className="block text-xl font-light mb-0.5">{filterCounts[cat]}</span>
-              {t.categories[cat] || cat}
+              {cat === 'All' ? 'All' : cat}
             </button>
           ))}
         </div>
@@ -1266,6 +1575,14 @@ export default function Dashboard() {
 
       {/* ── Modals ── */}
       <AnimatePresence>
+        {translationWarnings.length > 0 && (
+          <TranslationWarningModal
+            key="translation-warning"
+            warnings={translationWarnings}
+            onClose={() => setTranslationWarnings([])}
+          />
+        )}
+
         {showLangWarning && (
           <LangWarningModal
             key="lang-warning"
@@ -1286,6 +1603,7 @@ export default function Dashboard() {
             key="form"
             editItem={editItem}
             enabledLangs={enabledLangs}
+            categories={categories}
             onClose={() => {
               setShowAddModal(false);
               setEditItem(null);
@@ -1308,10 +1626,21 @@ export default function Dashboard() {
             key="discount-form"
             editDiscount={editDiscount}
             menuItems={items}
+            categories={categories}
             onClose={() => {
               setShowDiscountModal(false);
               setEditDiscount(null);
             }}
+            onSaved={loadAll}
+          />
+        )}
+
+        {showCategoryModal && (
+          <CategoryFormModal
+            key="category-form"
+            editCategory={editCategoryItem}
+            enabledLangCodes={enabledLangCodes}
+            onClose={() => { setShowCategoryModal(false); setEditCategoryItem(null); }}
             onSaved={loadAll}
           />
         )}

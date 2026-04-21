@@ -2,18 +2,13 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-
-const LANGS = [
-  { code: 'en', label: 'ENG', flag: '🇬🇧' },
-  { code: 'ru', label: 'RUS', flag: '🇷🇺' },
-  { code: 'uz', label: 'UZB', flag: '🇺🇿' },
-];
+import { LANGUAGES } from '../config/languages';
 
 export default function Navbar() {
   const { pathname } = useLocation();
-  const { lang, setLang, t } = useLanguage();
+  const { lang, setLang, t, allowedLanguages } = useLanguage();
   const [langOpen, setLangOpen] = useState(false);
-  const current = LANGS.find((l) => l.code === lang);
+  const currentLang = LANGUAGES[lang] || LANGUAGES.en;
 
   return (
     <motion.nav
@@ -61,47 +56,57 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Language Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setLangOpen((o) => !o)}
-              className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-gray-400 hover:text-gold transition-colors duration-200 border border-gold/20 hover:border-gold/50 rounded-lg px-3 py-1.5"
-            >
-              <span className="text-base leading-none">{current.flag}</span>
-              <span>{current.label}</span>
-              <span className="text-[10px] opacity-60">▼</span>
-            </button>
+          {/* Language Switcher — dynamic, populated from backend settings */}
+          {allowedLanguages.length > 1 && (
+            <div className="relative">
+              <button
+                onClick={() => setLangOpen((o) => !o)}
+                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-gray-400 hover:text-gold transition-colors duration-200 border border-gold/20 hover:border-gold/50 rounded-lg px-3 py-1.5"
+              >
+                <img
+                  src={currentLang.flag}
+                  alt={lang}
+                  className="w-5 h-4 object-cover rounded-sm"
+                />
+                <span>{currentLang.label}</span>
+                <span className="text-[10px] opacity-60">▼</span>
+              </button>
 
-            <AnimatePresence>
-              {langOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.96 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 bg-dark-card border border-gold/20 rounded-xl overflow-hidden shadow-xl min-w-[110px] z-50"
-                >
-                  {LANGS.map((l) => (
-                    <button
-                      key={l.code}
-                      onClick={() => {
-                        setLang(l.code);
-                        setLangOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors duration-150 ${
-                        lang === l.code
-                          ? 'text-gold bg-gold/10'
-                          : 'text-gray-400 hover:text-cream hover:bg-white/5'
-                      }`}
-                    >
-                      <span className="text-base leading-none">{l.flag}</span>
-                      <span>{l.label}</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              <AnimatePresence>
+                {langOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 bg-dark-card border border-gold/20 rounded-xl overflow-hidden shadow-xl min-w-[120px] z-50"
+                  >
+                    {allowedLanguages.map((code) => {
+                      const opt = LANGUAGES[code] || { label: code.toUpperCase(), flag: '' };
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => { setLang(code); setLangOpen(false); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors duration-150 ${
+                            lang === code
+                              ? 'text-gold bg-gold/10'
+                              : 'text-gray-400 hover:text-cream hover:bg-white/5'
+                          }`}
+                        >
+                          <img
+                            src={opt.flag}
+                            alt={code}
+                            className="w-5 h-4 object-cover rounded-sm"
+                          />
+                          <span>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
     </motion.nav>
