@@ -232,20 +232,28 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
                 />
               </div>
             )}
-            <input
-              type="file"
-              name="image"
-              accept="image/*"
-              onChange={handleChange}
-              className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gold/10 file:text-gold hover:file:bg-gold/20 cursor-pointer file:transition-colors"
-            />
-            <p className="text-gray-600 text-xs mt-2 mb-1">— or paste an image URL —</p>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <span className="py-2 px-4 rounded-lg bg-gold/10 text-gold text-sm hover:bg-gold/20 transition-colors whitespace-nowrap">
+                {t.chooseFile}
+              </span>
+              <span className="text-sm text-gray-400 truncate">
+                {form.image ? form.image.name : t.noFileChosen}
+              </span>
+              <input
+                type="file"
+                name="image"
+                accept="image/*"
+                onChange={handleChange}
+                className="sr-only"
+              />
+            </label>
+            <p className="text-gray-600 text-xs mt-2 mb-1">— {t.orPasteImageUrl} —</p>
             <input
               type="text"
               name="imageUrl"
               value={form.imageUrl}
               onChange={handleChange}
-              placeholder="https://example.com/image.jpg"
+              placeholder={t.imageUrlPlaceholder}
               className={inputCls}
             />
           </div>
@@ -264,7 +272,7 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
                       : 'border-dark-border text-gray-500 hover:text-gray-300'
                   }`}
                 >
-                  {l.label}
+                  {t.languages?.[l.code] || l.label}
                 </button>
               ))}
             </div>
@@ -275,7 +283,7 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
             <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
               {t.title}
               <span className="ml-2 text-gold/60 text-[10px] normal-case tracking-normal font-normal">
-                — {activeLang.label}{activeLang.code === 'en' ? ' (required)' : ' (optional)'}
+                — {t.languages?.[activeLang.code] || activeLang.label} ({activeLang.code === 'en' ? t.required : t.optional})
               </span>
             </label>
             <input
@@ -285,8 +293,8 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
               required={activeLang.code === 'en'}
               placeholder={
                 activeLang.code === 'en'
-                  ? 'e.g. Grilled Salmon'
-                  : `Title in ${activeLang.label}`
+                  ? t.titlePlaceholder
+                  : `Title in ${t.languages?.[activeLang.code] || activeLang.label}`
               }
               className={inputCls}
             />
@@ -312,7 +320,7 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
             </div>
             <div>
               <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-                Currency
+                {t.currency}
               </label>
               <select
                 name="currency"
@@ -353,7 +361,7 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
             <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
               {t.ingredients}
               <span className="ml-2 text-gold/60 text-[10px] normal-case tracking-normal font-normal">
-                — {activeLang.label}
+                — {t.languages?.[activeLang.code] || activeLang.label}
               </span>
             </label>
             <textarea
@@ -362,8 +370,8 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
               rows={3}
               placeholder={
                 activeLang.code === 'en'
-                  ? 'List the main ingredients…'
-                  : `Ingredients in ${activeLang.label}`
+                  ? t.ingredientsPlaceholder
+                  : `Ingredients in ${t.languages?.[activeLang.code] || activeLang.label}`
               }
               className={`${inputCls} resize-none`}
             />
