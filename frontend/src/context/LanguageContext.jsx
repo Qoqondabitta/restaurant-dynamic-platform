@@ -93,6 +93,9 @@ const translations = {
     vegetarian: 'Vegetarian',
     sushi: 'Sushi',
     special: 'Special Dishes',
+    targetingLabel: 'Targeting',
+    targetingHint: 'leave empty = all items',
+    specificItems: 'Specific Items',
   },
   ru: {
     menu: 'Меню',
@@ -185,6 +188,9 @@ const translations = {
     vegetarian: 'Вегетарианское',
     sushi: 'Суши',
     special: 'Фирменные блюда',
+    targetingLabel: 'Таргетинг',
+    targetingHint: 'оставьте пустым = все блюда',
+    specificItems: 'Конкретные блюда',
   },
   uz: {
     menu: 'Menyu',
@@ -277,6 +283,9 @@ const translations = {
     vegetarian: 'Vegetarian',
     sushi: 'Sushi',
     special: 'Maxsus taomlar',
+    targetingLabel: 'Maqsadli guruh',
+    targetingHint: "bo'sh qoldiring = barcha mahsulotlar",
+    specificItems: 'Maxsus mahsulotlar',
   },
   pl: {
     menu: 'Menu',
@@ -369,6 +378,9 @@ const translations = {
     vegetarian: 'Wegetariańskie',
     sushi: 'Sushi',
     special: 'Specjalności',
+    targetingLabel: 'Targetowanie',
+    targetingHint: 'zostaw puste = wszystkie pozycje',
+    specificItems: 'Konkretne pozycje',
   },
   es: {
     menu: 'Menú',
@@ -461,6 +473,9 @@ const translations = {
     vegetarian: 'Vegetariano',
     sushi: 'Sushi',
     special: 'Platos especiales',
+    targetingLabel: 'Orientación',
+    targetingHint: 'dejar vacío = todos los artículos',
+    specificItems: 'Artículos específicos',
   },
   tr: {
     menu: 'Menü',
@@ -553,6 +568,9 @@ const translations = {
     vegetarian: 'Vejeteryan',
     sushi: 'Sushi',
     special: 'Özel Yemekler',
+    targetingLabel: 'Hedefleme',
+    targetingHint: 'boş bırakın = tüm ürünler',
+    specificItems: 'Belirli Ürünler',
   },
   ar: {
     menu: 'قائمة الطعام',
@@ -645,6 +663,9 @@ const translations = {
     vegetarian: 'نباتي',
     sushi: 'سوشي',
     special: 'أطباق خاصة',
+    targetingLabel: 'الاستهداف',
+    targetingHint: 'اتركه فارغًا = جميع العناصر',
+    specificItems: 'عناصر محددة',
   },
   zh: {
     menu: '菜单',
@@ -737,6 +758,9 @@ const translations = {
     vegetarian: '素食',
     sushi: '寿司',
     special: '特色菜',
+    targetingLabel: '定向',
+    targetingHint: '留空 = 所有商品',
+    specificItems: '特定商品',
   },
   ja: {
     menu: 'メニュー',
@@ -829,6 +853,9 @@ const translations = {
     vegetarian: 'ベジタリアン',
     sushi: '寿司',
     special: '特別料理',
+    targetingLabel: 'ターゲット設定',
+    targetingHint: '空白 = すべての商品',
+    specificItems: '特定の商品',
   },
   ko: {
     menu: '메뉴',
@@ -921,6 +948,9 @@ const translations = {
     vegetarian: '채식',
     sushi: '스시',
     special: '특선 요리',
+    targetingLabel: '타겟팅',
+    targetingHint: '비워두면 = 전체 항목',
+    specificItems: '특정 항목',
   },
   pt: {
     menu: 'Menu',
@@ -1013,6 +1043,9 @@ const translations = {
     vegetarian: 'Vegetariano',
     sushi: 'Sushi',
     special: 'Pratos especiais',
+    targetingLabel: 'Segmentação',
+    targetingHint: 'deixar vazio = todos os itens',
+    specificItems: 'Itens específicos',
   },
   fr: {
     menu: 'Menu',
@@ -1105,6 +1138,9 @@ const translations = {
     vegetarian: 'Végétarien',
     sushi: 'Sushi',
     special: 'Plats spéciaux',
+    targetingLabel: 'Ciblage',
+    targetingHint: 'laisser vide = tous les articles',
+    specificItems: 'Articles spécifiques',
   },
   it: {
     menu: 'Menu',
@@ -1197,6 +1233,9 @@ const translations = {
     vegetarian: 'Vegetariano',
     sushi: 'Sushi',
     special: 'Piatti speciali',
+    targetingLabel: 'Targeting',
+    targetingHint: 'lascia vuoto = tutti gli articoli',
+    specificItems: 'Articoli specifici',
   },
 };
 

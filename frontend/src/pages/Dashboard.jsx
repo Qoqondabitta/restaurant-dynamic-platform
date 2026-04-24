@@ -443,7 +443,7 @@ function DeleteModal({ item, onClose, onConfirm }) {
 
 // ─── Discount Form Modal ─────────────────────────────────────────────────────
 function DiscountFormModal({ editDiscount, menuItems, enabledLangCodes, onClose, onSaved }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [form, setForm] = useState(EMPTY_DISCOUNT);
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) => enabledLangCodes?.includes(l.code));
   const [submitting, setSubmitting] = useState(false);
@@ -586,7 +586,7 @@ function DiscountFormModal({ editDiscount, menuItems, enabledLangCodes, onClose,
 
           <div>
             <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-              {t.discountPct} (%)
+              {t.discountPct} 
             </label>
             <input
               type="number"
@@ -681,13 +681,13 @@ function DiscountFormModal({ editDiscount, menuItems, enabledLangCodes, onClose,
           {/* ── Targeting ── */}
           <div className="border border-gold/20 rounded-xl p-4 space-y-4 bg-gold/5">
             <p className="text-gold text-xs font-bold uppercase tracking-[0.25em]">
-              ✦ Targeting <span className="text-gray-600 font-normal normal-case tracking-normal">(leave empty = all items)</span>
+              ✦ {t.targetingLabel} <span className="text-gray-600 font-normal normal-case tracking-normal">({t.targetingHint})</span>
             </p>
 
             {/* Categories */}
             <div>
               <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-                Categories
+                {t.menuCategories}
               </label>
               <div className="flex flex-wrap gap-2">
                 {DEFAULT_CATEGORIES.map((cat) => {
@@ -721,7 +721,7 @@ function DiscountFormModal({ editDiscount, menuItems, enabledLangCodes, onClose,
             {menuItems.length > 0 && (
               <div>
                 <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
-                  Specific Items
+                  {t.specificItems}
                 </label>
                 <div className="max-h-36 overflow-y-auto border border-dark-border rounded-lg divide-y divide-dark-border">
                   {menuItems.map((mi) => {
@@ -747,8 +747,10 @@ function DiscountFormModal({ editDiscount, menuItems, enabledLangCodes, onClose,
                         >
                           {selected && <span className="text-dark text-[10px] font-bold leading-none">✓</span>}
                         </div>
-                        <span className="text-cream text-xs flex-1">{getEn(mi.title)}</span>
-                        <span className="text-gray-600 text-[10px]">{mi.category}</span>
+                        <span className="text-cream text-xs flex-1">
+                          {typeof mi.title === 'string' ? mi.title : (mi.title?.[lang] || mi.title?.en || getEn(mi.title))}
+                        </span>
+                        <span className="text-gray-600 text-[10px]">{t[mi.category] || mi.category}</span>
                       </div>
                     );
                   })}
@@ -840,7 +842,7 @@ const fmtPrice = (price, currency) =>
 
 // ─── Menu Item Card (dashboard) ──────────────────────────────────────────────
 function DashboardCard({ item, onEdit, onDelete }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const d = item.discount;
   const hasDiscount = d && d.isActive && d.percentage > 0;
 
@@ -856,7 +858,7 @@ function DashboardCard({ item, onEdit, onDelete }) {
       <div className="relative aspect-video overflow-hidden">
         <img
           src={resolveImage(item.image)}
-          alt={getEn(item.title)}
+          alt={typeof item.title === 'string' ? item.title : (item.title?.[lang] || item.title?.en || '')}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
@@ -864,7 +866,7 @@ function DashboardCard({ item, onEdit, onDelete }) {
           }}
         />
         <span className="absolute top-3 left-3 bg-gold/90 text-dark text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
-          {item.category}
+          {t[item.category] || item.category}
         </span>
         {hasDiscount && (
           <span className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">
@@ -875,7 +877,9 @@ function DashboardCard({ item, onEdit, onDelete }) {
 
       <div className="p-5">
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className="font-serif text-lg text-cream leading-tight">{getEn(item.title)}</h3>
+          <h3 className="font-serif text-lg text-cream leading-tight">
+            {typeof item.title === 'string' ? item.title : (item.title?.[lang] || item.title?.en || '')}
+          </h3>
           <div className="text-right">
             {hasDiscount ? (
               <>
@@ -894,7 +898,7 @@ function DashboardCard({ item, onEdit, onDelete }) {
           </div>
         </div>
         <p className="text-gray-500 text-xs leading-relaxed mb-4 line-clamp-2">
-          {getEn(item.ingredients)}
+          {typeof item.ingredients === 'string' ? item.ingredients : (item.ingredients?.[lang] || item.ingredients?.en || '')}
         </p>
 
         <div className="flex gap-2">
