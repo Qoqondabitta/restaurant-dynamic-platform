@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 // POST /menu — add a new item (multipart/form-data or imageUrl in body)
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const { title: titleJson, ingredients: ingredientsJson, price, currency, category, imageUrl } = req.body;
+    const { title: titleJson, ingredients: ingredientsJson, price, currency, category, imageUrl, discountPercentage, discountActive } = req.body;
 
     const titleObj      = JSON.parse(titleJson      || '{}');
     const ingredientsObj = JSON.parse(ingredientsJson || '{}');
@@ -37,6 +37,10 @@ router.post('/', upload.single('image'), async (req, res) => {
       category,
       ingredients: ingredientsObj,
       image,
+      discount: {
+        percentage: parseFloat(discountPercentage) || 0,
+        isActive: discountActive === 'true' || discountActive === true,
+      },
     });
 
     const saved = await item.save();
@@ -49,7 +53,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 // PUT /menu/:id — update an item
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
-    const { title: titleJson, ingredients: ingredientsJson, price, currency, category, imageUrl } = req.body;
+    const { title: titleJson, ingredients: ingredientsJson, price, currency, category, imageUrl, discountPercentage, discountActive } = req.body;
 
     const titleObj      = JSON.parse(titleJson      || '{}');
     const ingredientsObj = JSON.parse(ingredientsJson || '{}');
@@ -64,6 +68,10 @@ router.put('/:id', upload.single('image'), async (req, res) => {
       currency: currency || 'USD',
       category,
       ingredients: ingredientsObj,
+      discount: {
+        percentage: parseFloat(discountPercentage) || 0,
+        isActive: discountActive === 'true' || discountActive === true,
+      },
     };
 
     if (req.file) {

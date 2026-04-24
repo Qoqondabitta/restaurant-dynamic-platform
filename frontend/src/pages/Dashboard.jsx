@@ -60,6 +60,8 @@ const EMPTY_FORM = {
   category: 'main',
   image: null,
   imageUrl: '',
+  discountPercentage: '',
+  discountActive: false,
 };
 
 const EMPTY_DISCOUNT = {
@@ -110,6 +112,8 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
         category: editItem.category,
         image: null,
         imageUrl: editItem.image.startsWith('http') ? editItem.image : '',
+        discountPercentage: editItem.discount?.percentage ?? '',
+        discountActive: editItem.discount?.isActive ?? false,
       });
       setPreview(resolveImage(editItem.image));
     }
@@ -155,6 +159,8 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
     fd.append('price',    form.price);
     fd.append('currency', form.currency || 'USD');
     fd.append('category', form.category);
+    fd.append('discountPercentage', form.discountPercentage || '0');
+    fd.append('discountActive', String(form.discountActive));
     if (form.image) fd.append('image', form.image);
     else if (form.imageUrl) fd.append('imageUrl', form.imageUrl);
 
@@ -361,6 +367,44 @@ function ItemFormModal({ editItem, enabledLangs, onClose, onSaved }) {
               }
               className={`${inputCls} resize-none`}
             />
+          </div>
+
+          {/* Item Discount */}
+          <div className="border border-dark-border rounded-xl p-4 space-y-3">
+            <p className="text-xs text-gray-400 uppercase tracking-widest">{t.discountSection}</p>
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div
+                onClick={() => setForm((p) => ({ ...p, discountActive: !p.discountActive }))}
+                className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative ${
+                  form.discountActive ? 'bg-gold' : 'bg-dark-border'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                    form.discountActive ? 'translate-x-5' : ''
+                  }`}
+                />
+              </div>
+              <span className="text-sm text-cream">{t.discountActive}</span>
+            </label>
+            {form.discountActive && (
+              <div>
+                <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2">
+                  {t.discountPercent}
+                </label>
+                <input
+                  type="number"
+                  name="discountPercentage"
+                  value={form.discountPercentage}
+                  onChange={handleChange}
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder="0"
+                  className={inputCls}
+                />
+              </div>
+            )}
           </div>
 
           {error && (

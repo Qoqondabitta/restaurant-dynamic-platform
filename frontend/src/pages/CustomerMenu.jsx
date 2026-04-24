@@ -4,6 +4,7 @@ import { fetchMenu, resolveImage } from '../api/menu';
 import { fetchDiscounts } from '../api/discounts';
 import { fetchSettings } from '../api/settings';
 import { useLanguage } from '../context/LanguageContext';
+import { getEffectiveDiscount } from '../utils/discountUtils';
 
 /** Resolves a multilingual field to a string for the given language code. */
 function itemText(field, lang) {
@@ -29,29 +30,6 @@ function getActiveGlobalDiscount(discounts) {
   );
 }
 
-/**
- * Returns { percentage, source, title?, appliesTo? } or null.
- * Discounts come exclusively from global promotions.
- * Respects category/item targeting when set; falls back to all items when empty.
- */
-function getItemDiscount(item, globalDiscount) {
-  if (globalDiscount) {
-    const cats    = globalDiscount.categories ?? [];
-    const itemIds = globalDiscount.items ?? [];
-    const noFilter       = !cats.length && !itemIds.length;
-    const matchesCategory = cats.includes(item.category);
-    const matchesItem     = itemIds.includes(item._id);
-    if (noFilter || matchesCategory || matchesItem) {
-      return {
-        percentage: globalDiscount.percentage,
-        source: 'global',
-        title: globalDiscount.title,
-        appliesTo: globalDiscount.appliesTo,
-      };
-    }
-  }
-  return null;
-}
 
 function discountedPrice(price, pct) {
   return price * (1 - pct / 100);
@@ -183,7 +161,7 @@ function DiscountBanner({ discount, index }) {
 // ─── Special Offers Card ─────────────────────────────────────────────────────
 function SpecialOfferCard({ item, activeGlobalDiscount }) {
   const { t, lang } = useLanguage();
-  const discount = getItemDiscount(item, activeGlobalDiscount);
+  const discount = getEffectiveDiscount(item, activeGlobalDiscount);
   const pct = discount?.percentage;
   const newPrice = pct ? discountedPrice(item.price, pct) : item.price;
   const isGlobal = discount?.source === 'global';
@@ -246,7 +224,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
   const title = typeof item.title === 'string' ? item.title : item.title?.[lang] || item.title?.en;
   const ingredients = typeof item.ingredients === 'string' ? item.ingredients : item.ingredients?.[lang] || item.ingredients?.en;
 
-  const discount  = getItemDiscount(item, activeGlobalDiscount);
+  const discount  = getEffectiveDiscount(item, activeGlobalDiscount);
   const pct       = discount?.percentage ?? null;
   const newPrice  = pct ? discountedPrice(item.price, pct) : null;
   const isGlobal  = discount?.source === 'global';
@@ -539,7 +517,7 @@ export default function CustomerMenu() {
 
   // Items that have any discount (item-level OR global)
   const saleItems = menuItems.filter(
-    (i) => getItemDiscount(i, activeGlobalDiscount) !== null
+    (i) => getEffectiveDiscount(i, activeGlobalDiscount) !== null
   );
 
   // Group items by category — discounted items float to top
@@ -549,8 +527,8 @@ export default function CustomerMenu() {
     const items = menuItems
       .filter((i) => i.category === cat)
       .sort((a, b) => {
-        const aHas = getItemDiscount(a, activeGlobalDiscount) !== null ? 1 : 0;
-        const bHas = getItemDiscount(b, activeGlobalDiscount) !== null ? 1 : 0;
+        const aHas = getEffectiveDiscount(a, activeGlobalDiscount) !== null ? 1 : 0;
+        const bHas = getEffectiveDiscount(b, activeGlobalDiscount) !== null ? 1 : 0;
         return bHas - aHas;
       });
     if (items.length) acc[cat] = items;
