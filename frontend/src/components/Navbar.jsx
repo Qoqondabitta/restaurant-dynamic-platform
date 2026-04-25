@@ -17,17 +17,17 @@ export default function Navbar() {
       transition={{ duration: 0.6, ease: 'easeOut' }}
       className="fixed top-0 left-0 right-0 z-50 bg-dark/90 backdrop-blur-md border-b border-gold/10"
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 max-[530px]:px-3 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <span className="text-gold text-xl leading-none">✦</span>
-          <span className="font-serif text-xl text-cream tracking-wide group-hover:text-gold transition-colors duration-300">
+        <Link to="/" className="flex items-center gap-3 max-[530px]:gap-2 group flex-shrink-0">
+          <span className="text-gold text-xl max-[530px]:text-base leading-none flex-shrink-0">✦</span>
+          <span className="font-serif text-xl max-[530px]:text-base text-cream tracking-wide group-hover:text-gold transition-colors duration-300 whitespace-nowrap">
             Luxe Kitchen
           </span>
         </Link>
 
         {/* Right side: Nav Links + Language Switcher */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 sm:gap-8 max-[530px]:gap-3 min-w-0 flex-shrink">
           <Link
             to="/"
             className="relative text-xs uppercase tracking-[0.2em] font-semibold transition-colors duration-300 text-gray-400 hover:text-gold"
@@ -61,14 +61,14 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setLangOpen((o) => !o)}
-                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-gray-400 hover:text-gold transition-colors duration-200 border border-gold/20 hover:border-gold/50 rounded-lg px-3 py-1.5"
+                className="flex items-center gap-1.5 max-[530px]:gap-1 text-xs font-semibold uppercase tracking-[0.15em] text-gray-400 hover:text-gold transition-colors duration-200 border border-gold/20 hover:border-gold/50 rounded-lg px-3 max-[530px]:px-2 py-1.5 max-[530px]:py-1"
               >
                 <img
                   src={currentLang.flag}
                   alt={lang}
-                  className="w-5 h-4 object-cover rounded-sm"
+                  className="w-5 h-4 object-cover rounded-sm flex-shrink-0"
                 />
-                <span>{currentLang.label}</span>
+                <span className="max-[530px]:hidden">{currentLang.label}</span>
                 <span className="text-[10px] opacity-60">▼</span>
               </button>
 

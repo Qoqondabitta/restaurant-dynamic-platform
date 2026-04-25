@@ -42,6 +42,13 @@
   }
 }
 
+/* Slightly scale down typography on very small screens */
+@media (max-width: 374px) {
+  html {
+    font-size: 87.5%; /* 14px base instead of 16px — ~2px reduction */
+  }
+}
+
 /* Custom scrollbar for modals */
 ::-webkit-scrollbar {
   width: 4px;
