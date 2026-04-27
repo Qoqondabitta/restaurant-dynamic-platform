@@ -6,7 +6,7 @@ const menuItemSchema = new mongoose.Schema(
     price: { type: Number, required: true, min: 0 },
     currency: {
       type: String,
-      enum: ['USD', 'EUR', 'RUB', 'UZS', 'PLN'],
+      enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'CHF', 'JPY', 'CNY', 'AED', 'SAR', 'TRY', 'RUB', 'UZS', 'PLN'],
       default: 'USD',
     },
     category: {
