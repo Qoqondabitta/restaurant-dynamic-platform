@@ -512,7 +512,12 @@ function DiscountFormModal({ editDiscount, menuItems, enabledLangCodes, onClose,
 
   useEffect(() => {
     if (editDiscount) {
-      const translationsObj = Object.fromEntries(editDiscount.translations || {});
+      const raw = editDiscount.translations;
+      const translationsObj =
+        !raw ? {}
+        : Array.isArray(raw) ? Object.fromEntries(raw)
+        : typeof raw === 'object' ? { ...raw }
+        : {};
       setForm({
         title: editDiscount.title,
         percentage: editDiscount.percentage,
