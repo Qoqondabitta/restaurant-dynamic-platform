@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 // PUT /settings — save languages + optional categories; returns non-blocking warnings
 router.put('/', async (req, res) => {
   try {
-    const { languages, categories: selectedCategories } = req.body;
+    const { languages, categories: selectedCategories, layout } = req.body;
     if (!Array.isArray(languages) || languages.length === 0) {
       return res.status(400).json({ message: 'At least one language is required' });
     }
@@ -32,6 +32,9 @@ router.put('/', async (req, res) => {
     if (Array.isArray(selectedCategories)) {
       const cats = [...new Set(selectedCategories)].filter((c) => c !== 'all');
       updatePayload.categories = cats.length ? cats : ['main'];
+    }
+    if (layout === 'top' || layout === 'sidebar') {
+      updatePayload.layout = layout;
     }
 
     // Save settings — never blocked
@@ -87,10 +90,11 @@ router.put('/', async (req, res) => {
         missingCategoryTranslations,
         languages: settings.languages,
         categories: settings.categories,
+        layout: settings.layout,
       });
     }
 
-    res.json({ success: true, warning: false, languages: settings.languages, categories: settings.categories });
+    res.json({ success: true, warning: false, languages: settings.languages, categories: settings.categories, layout: settings.layout });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

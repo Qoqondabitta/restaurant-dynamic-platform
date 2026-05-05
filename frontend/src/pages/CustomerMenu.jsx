@@ -251,15 +251,15 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       ref={ref}
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
-      className={`grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center py-16 border-b border-dark-border last:border-0 ${
+      className={`flex flex-col md:flex-row md:flex-wrap lg:grid lg:grid-cols-2 gap-5 lg:gap-16 md:items-start lg:items-center py-8 md:py-16 border-b border-dark-border last:border-0 ${
         isGlobal ? 'rounded-2xl ring-1 ring-gold/20 px-4 -mx-4' : ''
       }`}
     >
       {/* Image */}
       <motion.div
         variants={imgVariant}
-        className={`relative overflow-hidden rounded-2xl aspect-[4/3] ${
-          isEven ? 'md:order-1' : 'md:order-2'
+        className={`relative overflow-hidden rounded-2xl aspect-[4/3] w-full md:w-[40%] lg:w-full md:flex-shrink-0 md:order-1 ${
+          isEven ? 'lg:order-1' : 'lg:order-2'
         }`}
       >
         <img
@@ -283,7 +283,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            className="absolute top-4 left-4 bg-gold text-dark text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg"
+            className="absolute top-4 left-4 md:top-2 md:left-auto md:right-2 lg:top-4 lg:right-auto lg:left-4 bg-gold text-dark text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg"
           >
             {isGlobal ? `🎉 ${discountTitle}` : `🔥 -${pct}% ${t.off}`}
           </motion.div>
@@ -293,18 +293,55 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       {/* Text */}
       <motion.div
         variants={textVariant}
-        className={`flex flex-col justify-center ${isEven ? 'md:order-2' : 'md:order-1'}`}
+        className={`flex flex-col justify-center w-full md:flex-1 md:min-w-0 md:order-2 ${
+          isEven ? 'lg:order-2' : 'lg:order-1'
+        }`}
       >
-        <span className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">
+        {/* Category label — tablet/desktop only */}
+        <span className="hidden md:block text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">
           {item._categoryDisplayName || item.category}
         </span>
-        <h3 className="font-serif text-4xl md:text-5xl text-cream leading-tight mb-4">
+
+        {/* ── Mobile: title + price side by side ── */}
+        <div className="flex items-start justify-between gap-3 mb-2 md:hidden">
+          <h3 className="font-serif text-xl text-cream leading-tight flex-1 min-w-0">
+            {title}
+          </h3>
+          <div className="flex-shrink-0 text-right">
+            {pct ? (
+              <div>
+                <span className="text-gray-400 text-xs line-through block leading-snug">
+                  {fmtPrice(item.price, item.currency)}
+                </span>
+                <span className="text-gold text-sm font-bold">
+                  {fmtPrice(newPrice, item.currency)}
+                </span>
+              </div>
+            ) : (
+              <span className="text-gold text-sm font-semibold">
+                {fmtPrice(item.price, item.currency)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile discount badge */}
+        {pct && (
+          <div className="flex items-center gap-2 mb-3 md:hidden">
+            <span className="bg-gold/20 border border-gold/40 text-gold text-[10px] font-bold px-2 py-0.5 rounded-full">
+              -{pct}%{isGlobal ? ` · ${discountTitle}` : ` ${t.off}`}
+            </span>
+          </div>
+        )}
+
+        {/* ── Tablet/desktop: large title ── */}
+        <h3 className="hidden md:block font-serif text-4xl lg:text-5xl text-cream leading-tight mb-4">
           {title}
         </h3>
 
-        {/* Price — discounted or normal */}
+        {/* Tablet/desktop: full price section */}
         {pct ? (
-          <>
+          <div className="hidden md:block">
             <div className="flex items-center gap-4 mb-3">
               <span className="text-gray-500 text-2xl line-through font-light">
                 {fmtPrice(item.price, item.currency)}
@@ -320,7 +357,6 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
                 -{pct}%
               </span>
             </div>
-            {/* Source label */}
             {isGlobal && (
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold/70 bg-gold/10 border border-gold/20 px-2.5 py-1 rounded-full">
@@ -328,20 +364,32 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
                 </span>
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <p className="text-gold text-3xl font-light mb-6">{fmtPrice(item.price, item.currency)}</p>
+          <p className="hidden md:block text-gold text-3xl font-light mb-6">
+            {fmtPrice(item.price, item.currency)}
+          </p>
         )}
 
-        <div className="flex items-center gap-4 mb-6">
+        <div className="hidden lg:flex items-center gap-4 mb-6">
           <div className="w-12 h-px bg-gold" />
           <div className="w-2 h-2 rounded-full bg-gold/60" />
           <div className="w-6 h-px bg-gold/40" />
         </div>
-        <p className="text-gray-400 text-sm leading-relaxed max-w-sm">
+        <p className="hidden lg:block text-gray-400 text-sm leading-relaxed max-w-sm">
           {ingredients}
         </p>
       </motion.div>
+
+      {/* Ingredients — full-width row on mobile & tablet; hidden at desktop where it lives inside text column */}
+      <div className="w-full order-3 lg:hidden">
+        <div className="flex items-center gap-4 mb-2 mt-1">
+          <div className="w-12 h-px bg-gold" />
+          <div className="w-2 h-2 rounded-full bg-gold/60" />
+          <div className="w-6 h-px bg-gold/40" />
+        </div>
+        <p className="text-gray-400 text-xs md:text-sm leading-relaxed">{ingredients}</p>
+      </div>
     </motion.div>
   );
 }
@@ -447,7 +495,46 @@ export default function CustomerMenu() {
   // Increments every 10 s to force re-evaluation of time-based discount logic
   // even when the fetched data hasn't changed (discount becomes active/expired).
   const [tick, setTick] = useState(0);
+  const [menuLayout, setMenuLayout] = useState('top');
+  const [activeSidebarCat, setActiveSidebarCat] = useState('');
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const catBarSentinelRef = useRef(null);
+  const [catBarIsFixed, setCatBarIsFixed] = useState(false);
   const { t, lang, refreshSettings } = useLanguage();
+
+  // Prevent body scroll while mobile drawer is open
+  useEffect(() => {
+    if (mobileDrawerOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileDrawerOpen]);
+
+  // Scroll-triggered fixed category bar (mobile top layout only)
+  // Observes a zero-height sentinel at the nav's natural position.
+  // rootMargin: -64px top = fires when sentinel reaches the fixed navbar, not the raw viewport edge.
+  useEffect(() => {
+    setCatBarIsFixed(false); // reset on layout switch
+    const sentinel = catBarSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (window.innerWidth < 768) setCatBarIsFixed(!entry.isIntersecting);
+      },
+      { rootMargin: '-64px 0px 0px 0px', threshold: 0 }
+    );
+    observer.observe(sentinel);
+
+    const onResize = () => {
+      if (window.innerWidth >= 768) setCatBarIsFixed(false);
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', onResize);
+    };
+  }, [menuLayout]);
 
   useEffect(() => {
     // ── Fetch helpers ──────────────────────────────────────────────────────
@@ -466,6 +553,7 @@ export default function CustomerMenu() {
         .then((res) => {
           const cats = res.data.categories;
           setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
+          if (res.data.layout) setMenuLayout(res.data.layout);
         })
         .catch(() => {});
 
@@ -514,6 +602,47 @@ export default function CustomerMenu() {
 
   // Banners: all currently-active global discounts
   const activeGlobalDiscounts = discounts.filter(isGlobalDiscountActive);
+
+  // All categories grouped — used by sidebar layout (always shows all)
+  const sidebarGrouped = useMemo(
+    () =>
+      selectedCategories.reduce((acc, cat) => {
+        const items = menuItems
+          .filter((i) => i.category === cat)
+          .sort((a, b) => {
+            const aHas = getEffectiveDiscount(a, activeGlobalDiscount) !== null ? 1 : 0;
+            const bHas = getEffectiveDiscount(b, activeGlobalDiscount) !== null ? 1 : 0;
+            return bHas - aHas;
+          });
+        if (items.length) acc[cat] = items;
+        return acc;
+      }, {}),
+    [selectedCategories, menuItems, activeGlobalDiscount] // eslint-disable-line
+  );
+
+  // Initialise sidebar active category when layout or categories change
+  useEffect(() => {
+    if (menuLayout === 'sidebar' && selectedCategories.length > 0) {
+      setActiveSidebarCat((prev) => prev || selectedCategories[0]);
+    }
+  }, [menuLayout, selectedCategories]);
+
+  // Scroll-spy for sidebar: highlight the category whose section is in view
+  useEffect(() => {
+    if (menuLayout !== 'sidebar') return;
+    const handleScroll = () => {
+      for (let i = selectedCategories.length - 1; i >= 0; i--) {
+        const el = document.getElementById(`category-${selectedCategories[i]}`);
+        if (el && el.getBoundingClientRect().top <= 120) {
+          setActiveSidebarCat(selectedCategories[i]);
+          return;
+        }
+      }
+      if (selectedCategories.length) setActiveSidebarCat(selectedCategories[0]);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [menuLayout, selectedCategories]);
 
   // Items that have any discount (item-level OR global)
   const saleItems = menuItems.filter(
@@ -661,79 +790,206 @@ export default function CustomerMenu() {
         )}
       </AnimatePresence>
 
-      {/* ── Sticky Category Nav ── */}
-      <nav className="sticky top-16 z-40 bg-dark/95 backdrop-blur-md border-b border-dark-border">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex gap-0 overflow-x-auto scrollbar-hide">
-            {ALL_TABS.map((tab) => (
+      {menuLayout === 'sidebar' ? (
+        /* ── Sidebar Layout ── */
+        <div className="flex max-w-7xl mx-auto">
+
+          {/* ── Mobile drawer overlay ── */}
+          {mobileDrawerOpen && (
+            <div
+              className="fixed inset-0 bg-black/60 z-40 md:hidden"
+              onClick={() => setMobileDrawerOpen(false)}
+            />
+          )}
+
+          {/* ── Mobile drawer panel ── */}
+          <div
+            className={`fixed top-0 left-0 h-full w-64 bg-dark-card border-r border-dark-border z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+              mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex items-center justify-between px-4 py-5 border-b border-dark-border">
+              <span className="text-cream text-xs font-semibold uppercase tracking-widest">{t.menuCategories}</span>
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`relative px-6 py-4 text-xs font-semibold uppercase tracking-[0.2em] whitespace-nowrap transition-colors duration-300 ${
-                  activeTab === tab ? 'text-gold' : 'text-gray-500 hover:text-gray-300'
-                }`}
+                onClick={() => setMobileDrawerOpen(false)}
+                className="text-gray-400 hover:text-cream text-lg leading-none transition-colors duration-200"
               >
-                {t[tab] || tab}
-                {activeTab === tab && (
-                  <motion.span
-                    layoutId="categoryUnderline"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
+                ✕
               </button>
-            ))}
-          </div>
-        </div>
-      </nav>
-
-      {/* ── Menu Content ── */}
-      <main className="max-w-6xl mx-auto px-4 py-12">
-        {loading && (
-          <div className="flex flex-col items-center justify-center h-64 gap-4">
-            <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-            <p className="text-gray-500 text-sm">{t.loading}</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-red-400 text-center">{error}</p>
-          </div>
-        )}
-
-        {!loading && !error && (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
-              {Object.entries(grouped).map(([cat, items]) => (
-                <section key={cat} id={cat}>
-                  <CategoryHeading displayName={t[cat] || cat} />
-                  {items.map((item, idx) => (
-                    <MenuItemCard
-                      key={item._id}
-                      item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
-                      index={idx}
-                      activeGlobalDiscount={activeGlobalDiscount}
-                    />
-                  ))}
-                </section>
+            </div>
+            <nav className="py-4 px-3 overflow-y-auto h-[calc(100%-64px)] scrollbar-hide">
+              {selectedCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    document.getElementById(`category-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setActiveSidebarCat(cat);
+                    setMobileDrawerOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-r-lg text-xs font-semibold uppercase tracking-widest transition-all duration-200 mb-1 border-l-2 ${
+                    activeSidebarCat === cat
+                      ? 'bg-gold/20 text-gold border-gold'
+                      : 'text-gray-400 hover:text-cream hover:bg-dark/60 border-transparent'
+                  }`}
+                >
+                  {t[cat] || cat}
+                </button>
               ))}
+            </nav>
+          </div>
 
-              {Object.keys(grouped).length === 0 && (
-                <div className="text-center py-32">
-                  <p className="text-gray-600 text-lg font-serif">{t.noItems}</p>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        )}
-      </main>
+          {/* ── Desktop / tablet aside (unchanged) ── */}
+          <aside className="sticky top-20 self-start max-h-[calc(100vh-100px)] w-52 flex-shrink-0 overflow-y-auto border-r border-dark-border bg-dark/95 backdrop-blur-md hidden md:block scrollbar-hide">
+            <nav className="py-6 px-2">
+              {selectedCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    document.getElementById(`category-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setActiveSidebarCat(cat);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 rounded-r-lg text-xs font-semibold uppercase tracking-widest transition-all duration-200 mb-1 border-l-2 ${
+                    activeSidebarCat === cat
+                      ? 'bg-gold/20 text-gold border-gold'
+                      : 'text-gray-400 hover:text-cream hover:bg-dark-card/60 border-transparent'
+                  }`}
+                >
+                  {t[cat] || cat}
+                </button>
+              ))}
+            </nav>
+          </aside>
+
+          <main className="flex-1 min-w-0 px-4 md:px-8 py-12">
+            {/* ── Mobile categories toggle button ── */}
+            <div className="md:hidden mb-6">
+              <button
+                onClick={() => setMobileDrawerOpen(true)}
+                className="flex items-center gap-2.5 px-4 py-2.5 bg-dark-card border border-dark-border rounded-xl text-gray-300 text-sm font-semibold hover:border-gold/40 hover:text-cream transition-all duration-200"
+              >
+                <span className="text-base leading-none">☰</span>
+                <span>{t.menuCategories}</span>
+              </button>
+            </div>
+            {loading && (
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                <p className="text-gray-500 text-sm">{t.loading}</p>
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-red-400 text-center">{error}</p>
+              </div>
+            )}
+            {!loading && !error && (
+              <div>
+                {Object.entries(sidebarGrouped).map(([cat, items]) => (
+                  <section key={cat} id={`category-${cat}`}>
+                    <CategoryHeading displayName={t[cat] || cat} />
+                    {items.map((item, idx) => (
+                      <MenuItemCard
+                        key={item._id}
+                        item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
+                        index={idx}
+                        activeGlobalDiscount={activeGlobalDiscount}
+                      />
+                    ))}
+                  </section>
+                ))}
+                {Object.keys(sidebarGrouped).length === 0 && (
+                  <div className="text-center py-32">
+                    <p className="text-gray-600 text-lg font-serif">{t.noItems}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
+      ) : (
+        /* ── Top Layout ── */
+        <>
+          {/* ── Category Nav ── */}
+          {/* Sentinel — zero-height, stays in flow so the observer gets a stable signal
+              even when the nav itself is fixed (fixed elements don't scroll, creating a feedback loop) */}
+          <div ref={catBarSentinelRef} className="h-0" aria-hidden="true" />
+          {/* Spacer — mobile only, prevents layout jump when nav leaves the flow */}
+          {catBarIsFixed && <div className="h-12 md:hidden" aria-hidden="true" />}
+          <nav className={`z-40 border-b border-dark-border ${
+            catBarIsFixed
+              ? 'fixed top-16 left-0 right-0 bg-dark'
+              : 'md:sticky md:top-16 md:bg-dark/95 md:backdrop-blur-md'
+          }`}>
+            <div className="max-w-6xl mx-auto px-4">
+              <div className="flex gap-0 overflow-x-auto scrollbar-hide">
+                {ALL_TABS.map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`relative px-6 py-4 text-xs font-semibold uppercase tracking-[0.2em] whitespace-nowrap transition-colors duration-300 ${
+                      activeTab === tab ? 'text-gold' : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    {t[tab] || tab}
+                    {activeTab === tab && (
+                      <motion.span
+                        layoutId="categoryUnderline"
+                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </nav>
+
+          {/* ── Menu Content ── */}
+          <main className="max-w-6xl mx-auto px-4 py-12">
+            {loading && (
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                <p className="text-gray-500 text-sm">{t.loading}</p>
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-red-400 text-center">{error}</p>
+              </div>
+            )}
+            {!loading && !error && (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  {Object.entries(grouped).map(([cat, items]) => (
+                    <section key={cat} id={`category-${cat}`}>
+                      <CategoryHeading displayName={t[cat] || cat} />
+                      {items.map((item, idx) => (
+                        <MenuItemCard
+                          key={item._id}
+                          item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
+                          index={idx}
+                          activeGlobalDiscount={activeGlobalDiscount}
+                        />
+                      ))}
+                    </section>
+                  ))}
+                  {Object.keys(grouped).length === 0 && (
+                    <div className="text-center py-32">
+                      <p className="text-gray-600 text-lg font-serif">{t.noItems}</p>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </main>
+        </>
+      )}
 
       {/* ── Debug Panel (fixed bottom-right, toggle with 🐛 button) ── */}
       <DebugPanel discounts={discounts} />

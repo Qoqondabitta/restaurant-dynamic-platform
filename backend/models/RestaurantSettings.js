@@ -14,6 +14,11 @@ const restaurantSettingsSchema = new mongoose.Schema(
       type: [String],
       default: ['main'],
     },
+    layout: {
+      type: String,
+      enum: ['top', 'sidebar'],
+      default: 'top',
+    },
   },
   { timestamps: true }
 );
