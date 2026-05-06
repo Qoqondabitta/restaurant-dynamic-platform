@@ -21,7 +21,10 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 max-[530px]:gap-2 group flex-shrink-0">
           <span className="text-gold text-xl max-[530px]:text-base leading-none flex-shrink-0">✦</span>
-          <span className="font-serif text-xl max-[530px]:text-base text-cream tracking-wide group-hover:text-gold transition-colors duration-300 whitespace-nowrap">
+          <span className="hidden max-[400px]:block font-serif text-sm text-cream tracking-wide group-hover:text-gold transition-colors duration-300 leading-tight text-center">
+            Luxe<br />Kitchen
+          </span>
+          <span className="block max-[400px]:hidden font-serif text-xl max-[530px]:text-base text-cream tracking-wide group-hover:text-gold transition-colors duration-300 whitespace-nowrap">
             Luxe Kitchen
           </span>
         </Link>

@@ -220,6 +220,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.25 });
   const isEven = index % 2 === 0;
+  const [preview, setPreview] = useState(null);
   const { t, lang } = useLanguage();
   const title = typeof item.title === 'string' ? item.title : item.title?.[lang] || item.title?.en;
   const ingredients = typeof item.ingredients === 'string' ? item.ingredients : item.ingredients?.[lang] || item.ingredients?.en;
@@ -251,16 +252,17 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       ref={ref}
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
-      className={`flex flex-col md:flex-row md:flex-wrap lg:grid lg:grid-cols-2 gap-5 lg:gap-16 md:items-start lg:items-center py-8 md:py-16 border-b border-dark-border last:border-0 ${
+      className={`flex flex-col lg:grid lg:grid-cols-2 gap-3 lg:gap-16 lg:items-center py-5 md:py-8 lg:py-16 border-b border-dark-border last:border-0 ${
         isGlobal ? 'rounded-2xl ring-1 ring-gold/20 px-4 -mx-4' : ''
       }`}
     >
       {/* Image */}
       <motion.div
         variants={imgVariant}
-        className={`relative overflow-hidden rounded-2xl aspect-[4/3] w-full md:w-[40%] lg:w-full md:flex-shrink-0 md:order-1 ${
+        className={`relative overflow-hidden rounded-2xl aspect-[3/2] md:aspect-[4/3] w-full cursor-pointer ${
           isEven ? 'lg:order-1' : 'lg:order-2'
         }`}
+        onClick={() => setPreview(resolveImage(item.image))}
       >
         <img
           src={resolveImage(item.image)}
@@ -283,7 +285,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            className="absolute top-4 left-4 md:top-2 md:left-auto md:right-2 lg:top-4 lg:right-auto lg:left-4 bg-gold text-dark text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg"
+            className="absolute top-4 left-4 bg-gold text-dark text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg"
           >
             {isGlobal ? `🎉 ${discountTitle}` : `🔥 -${pct}% ${t.off}`}
           </motion.div>
@@ -293,18 +295,18 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       {/* Text */}
       <motion.div
         variants={textVariant}
-        className={`flex flex-col justify-center w-full md:flex-1 md:min-w-0 md:order-2 ${
+        className={`flex flex-col justify-center w-full lg:flex-1 lg:min-w-0 ${
           isEven ? 'lg:order-2' : 'lg:order-1'
         }`}
       >
         {/* Category label — tablet/desktop only */}
-        <span className="hidden md:block text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">
+        <span className="hidden lg:block text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">
           {item._categoryDisplayName || item.category}
         </span>
 
         {/* ── Mobile: title + price side by side ── */}
-        <div className="flex items-start justify-between gap-3 mb-2 md:hidden">
-          <h3 className="font-serif text-xl text-cream leading-tight flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-3 mb-2 lg:hidden">
+          <h3 className="font-serif text-base md:text-xl text-cream leading-tight flex-1 min-w-0">
             {title}
           </h3>
           <div className="flex-shrink-0 text-right">
@@ -327,7 +329,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
 
         {/* Mobile discount badge */}
         {pct && (
-          <div className="flex items-center gap-2 mb-3 md:hidden">
+          <div className="flex items-center gap-2 mb-3 lg:hidden">
             <span className="bg-gold/20 border border-gold/40 text-gold text-[10px] font-bold px-2 py-0.5 rounded-full">
               -{pct}%{isGlobal ? ` · ${discountTitle}` : ` ${t.off}`}
             </span>
@@ -335,19 +337,19 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
         )}
 
         {/* ── Tablet/desktop: large title ── */}
-        <h3 className="hidden md:block font-serif text-4xl lg:text-5xl text-cream leading-tight mb-4">
+        <h3 className="hidden lg:block font-serif text-5xl text-cream leading-tight mb-3">
           {title}
         </h3>
 
         {/* Tablet/desktop: full price section */}
         {pct ? (
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <div className="flex items-center gap-4 mb-3">
-              <span className="text-gray-500 text-2xl line-through font-light">
+              <span className="text-gray-500 text-base md:text-xl lg:text-2xl line-through font-light">
                 {fmtPrice(item.price, item.currency)}
               </span>
               <motion.span
-                className="text-gold text-3xl font-bold"
+                className="text-gold text-lg md:text-2xl lg:text-3xl font-bold"
                 animate={{ textShadow: ['0 0 0px #c9a84c', '0 0 12px #c9a84c', '0 0 0px #c9a84c'] }}
                 transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
               >
@@ -366,7 +368,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
             )}
           </div>
         ) : (
-          <p className="hidden md:block text-gold text-3xl font-light mb-6">
+          <p className="hidden lg:block text-gold text-3xl font-light mb-6">
             {fmtPrice(item.price, item.currency)}
           </p>
         )}
@@ -388,8 +390,38 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
           <div className="w-2 h-2 rounded-full bg-gold/60" />
           <div className="w-6 h-px bg-gold/40" />
         </div>
-        <p className="text-gray-400 text-xs md:text-sm leading-relaxed">{ingredients}</p>
+        <p className="text-gray-400 text-xs leading-relaxed">{ingredients}</p>
       </div>
+
+      {/* Image preview modal */}
+      <AnimatePresence>
+        {preview && (
+          <motion.div
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreview(null)}
+          >
+            <motion.img
+              src={preview}
+              alt={title}
+              className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setPreview(null)}
+              className="absolute top-4 right-4 text-white text-2xl leading-none hover:text-gold transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -413,75 +445,6 @@ function CategoryHeading({ displayName }) {
   );
 }
 
-// ─── Debug Panel ─────────────────────────────────────────────────────────────
-function DebugPanel({ discounts }) {
-  const [open, setOpen] = useState(false);
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const fmt = (dt) => (dt ? new Date(dt).toISOString() : '—');
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50 font-mono text-xs">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="bg-dark-card border border-gold/40 text-gold px-3 py-1.5 rounded-lg shadow-lg hover:bg-gold/10 transition-colors"
-      >
-        🐛 Debug {open ? '▲' : '▼'}
-      </button>
-
-      {open && (
-        <div className="mt-2 w-[420px] max-h-[60vh] overflow-y-auto bg-dark-card border border-gold/20 rounded-xl p-4 shadow-2xl space-y-3">
-          {/* Current time */}
-          <div className="border-b border-dark-border pb-2">
-            <p className="text-gold font-bold mb-1">⏰ Current Time</p>
-            <p className="text-cream">{now.toISOString()}</p>
-            <p className="text-gray-500">Local: {now.toLocaleString()}</p>
-          </div>
-
-          {/* Global discounts */}
-          <div className="border-b border-dark-border pb-2">
-            <p className="text-gold font-bold mb-1">🌐 Global Discounts ({discounts.length})</p>
-            {discounts.length === 0 && <p className="text-gray-500">None</p>}
-            {discounts.map((d) => {
-              const start = new Date(d.startTime);
-              const end = new Date(d.endTime);
-              const active = d.isActive && now >= start && now <= end;
-              console.log('[Discount Debug] Global:', {
-                title: d.title,
-                now: now.toISOString(),
-                startTime: start.toISOString(),
-                endTime: end.toISOString(),
-                isActive: d.isActive,
-                inTimeRange: now >= start && now <= end,
-                effectivelyActive: active,
-              });
-              return (
-                <div key={d._id} className="mb-2 pl-2 border-l-2 border-gold/20">
-                  <p className="text-cream">{d.title} — -{d.percentage}%</p>
-                  <p className="text-gray-500">Start: {fmt(d.startTime)}</p>
-                  <p className="text-gray-500">End:   {fmt(d.endTime)}</p>
-                  <p className={active ? 'text-emerald-400' : 'text-red-400'}>
-                    {active ? '✅ ACTIVE' : '❌ NOT ACTIVE'}{' '}
-                    {!d.isActive && '(isActive=false)'}
-                    {d.isActive && now < start && '(not started yet)'}
-                    {d.isActive && now > end && '(expired)'}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main page ───────────────────────────────────────────────────────────────
 const POLL_INTERVAL = 15000; // 15 s — balance between freshness and requests
 
@@ -498,8 +461,6 @@ export default function CustomerMenu() {
   const [menuLayout, setMenuLayout] = useState('top');
   const [activeSidebarCat, setActiveSidebarCat] = useState('');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const catBarSentinelRef = useRef(null);
-  const [catBarIsFixed, setCatBarIsFixed] = useState(false);
   const { t, lang, refreshSettings } = useLanguage();
 
   // Prevent body scroll while mobile drawer is open
@@ -509,32 +470,6 @@ export default function CustomerMenu() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileDrawerOpen]);
 
-  // Scroll-triggered fixed category bar (mobile top layout only)
-  // Observes a zero-height sentinel at the nav's natural position.
-  // rootMargin: -64px top = fires when sentinel reaches the fixed navbar, not the raw viewport edge.
-  useEffect(() => {
-    setCatBarIsFixed(false); // reset on layout switch
-    const sentinel = catBarSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (window.innerWidth < 768) setCatBarIsFixed(!entry.isIntersecting);
-      },
-      { rootMargin: '-64px 0px 0px 0px', threshold: 0 }
-    );
-    observer.observe(sentinel);
-
-    const onResize = () => {
-      if (window.innerWidth >= 768) setCatBarIsFixed(false);
-    };
-    window.addEventListener('resize', onResize);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', onResize);
-    };
-  }, [menuLayout]);
 
   useEffect(() => {
     // ── Fetch helpers ──────────────────────────────────────────────────────
@@ -887,14 +822,16 @@ export default function CustomerMenu() {
                 {Object.entries(sidebarGrouped).map(([cat, items]) => (
                   <section key={cat} id={`category-${cat}`}>
                     <CategoryHeading displayName={t[cat] || cat} />
-                    {items.map((item, idx) => (
-                      <MenuItemCard
-                        key={item._id}
-                        item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
-                        index={idx}
-                        activeGlobalDiscount={activeGlobalDiscount}
-                      />
-                    ))}
+                    <div className="space-y-4">
+                      {items.map((item, idx) => (
+                        <MenuItemCard
+                          key={item._id}
+                          item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
+                          index={idx}
+                          activeGlobalDiscount={activeGlobalDiscount}
+                        />
+                      ))}
+                    </div>
                   </section>
                 ))}
                 {Object.keys(sidebarGrouped).length === 0 && (
@@ -910,16 +847,7 @@ export default function CustomerMenu() {
         /* ── Top Layout ── */
         <>
           {/* ── Category Nav ── */}
-          {/* Sentinel — zero-height, stays in flow so the observer gets a stable signal
-              even when the nav itself is fixed (fixed elements don't scroll, creating a feedback loop) */}
-          <div ref={catBarSentinelRef} className="h-0" aria-hidden="true" />
-          {/* Spacer — mobile only, prevents layout jump when nav leaves the flow */}
-          {catBarIsFixed && <div className="h-12 md:hidden" aria-hidden="true" />}
-          <nav className={`z-40 border-b border-dark-border ${
-            catBarIsFixed
-              ? 'fixed top-16 left-0 right-0 bg-dark'
-              : 'md:sticky md:top-16 md:bg-dark/95 md:backdrop-blur-md'
-          }`}>
+          <nav className="sticky top-[60px] md:top-16 z-40 bg-dark md:bg-dark/95 md:backdrop-blur-md border-b border-dark-border">
             <div className="max-w-6xl mx-auto px-4">
               <div className="flex gap-0 overflow-x-auto scrollbar-hide">
                 {ALL_TABS.map((tab) => (
@@ -969,14 +897,16 @@ export default function CustomerMenu() {
                   {Object.entries(grouped).map(([cat, items]) => (
                     <section key={cat} id={`category-${cat}`}>
                       <CategoryHeading displayName={t[cat] || cat} />
-                      {items.map((item, idx) => (
-                        <MenuItemCard
-                          key={item._id}
-                          item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
-                          index={idx}
-                          activeGlobalDiscount={activeGlobalDiscount}
-                        />
-                      ))}
+                      <div className="space-y-4">
+                        {items.map((item, idx) => (
+                          <MenuItemCard
+                            key={item._id}
+                            item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
+                            index={idx}
+                            activeGlobalDiscount={activeGlobalDiscount}
+                          />
+                        ))}
+                      </div>
                     </section>
                   ))}
                   {Object.keys(grouped).length === 0 && (
@@ -990,9 +920,6 @@ export default function CustomerMenu() {
           </main>
         </>
       )}
-
-      {/* ── Debug Panel (fixed bottom-right, toggle with 🐛 button) ── */}
-      <DebugPanel discounts={discounts} />
 
       {/* ── Footer ── */}
       <footer className="bg-dark-card border-t border-dark-border py-16 text-center mt-8">
