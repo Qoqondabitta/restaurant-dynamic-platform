@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE = 'https://restaurant-dynamic-platform.onrender.com/settings';
+const BASE = `${API_URL}/settings`;
 
 export const fetchSettings = () => axios.get(BASE);
 export const updateSettings = (data) => axios.put(BASE, data);

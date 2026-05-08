@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE = 'https://restaurant-dynamic-platform.onrender.com/menu';
+const BASE = `${API_URL}/menu`;
 
 export const fetchMenu = () => axios.get(BASE);
 

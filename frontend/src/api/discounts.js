@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE = 'https://restaurant-dynamic-platform.onrender.com/discounts';
+const BASE = `${API_URL}/discounts`;
 
 export const fetchDiscounts = () => axios.get(BASE);
 

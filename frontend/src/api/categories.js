@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE = 'https://restaurant-dynamic-platform.onrender.com/categories';
+const BASE = `${API_URL}/categories`;
 
 export const fetchCategories = () => axios.get(BASE);
 export const createCategory = (data) => axios.post(BASE, data);
