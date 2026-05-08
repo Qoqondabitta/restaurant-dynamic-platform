@@ -21,7 +21,9 @@ app.use('/settings', settingsRoutes);
 app.use('/categories', categoryRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
+app.get('/', (req, res) => {
+  res.send('Restaurant backend is running');
+});
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 console.log("Using Mongo URI:", MONGO_URI);
