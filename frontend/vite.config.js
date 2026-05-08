@@ -6,8 +6,8 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/menu': 'http://localhost:5000',
-      '/uploads': 'http://localhost:5000',
+      '/menu': 'https://restaurant-dynamic-platform.onrender.com',
+      '/uploads': 'https://restaurant-dynamic-platform.onrender.com',
     },
   },
 });
