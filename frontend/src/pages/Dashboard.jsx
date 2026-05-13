@@ -1180,6 +1180,8 @@ export default function Dashboard() {
   const [orderActiveCat, setOrderActiveCat] = useState('');
   const [catOrderSaved, setCatOrderSaved] = useState(false);
   const [itemOrderSaved, setItemOrderSaved] = useState(false);
+  const [itemOrderError, setItemOrderError] = useState(false);
+  const [savingItemOrder, setSavingItemOrder] = useState(false);
 
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
     enabledLangCodes.includes(l.code)
@@ -1345,17 +1347,23 @@ export default function Dashboard() {
   };
 
   const saveItemOrder = async () => {
+    setSavingItemOrder(true);
+    setItemOrderError(false);
     try {
       const orders = [];
       Object.entries(localItemOrder).forEach(([, ids]) => {
         ids.forEach((id, idx) => orders.push({ _id: id, sortOrder: idx }));
       });
       await reorderMenuItems(orders);
+      await loadAll();
       setItemOrderSaved(true);
       setTimeout(() => setItemOrderSaved(false), 3000);
-      await loadAll();
     } catch (err) {
       console.error(err);
+      setItemOrderError(true);
+      setTimeout(() => setItemOrderError(false), 4000);
+    } finally {
+      setSavingItemOrder(false);
     }
   };
 
@@ -1636,17 +1644,17 @@ export default function Dashboard() {
         <div className="bg-dark-card border border-dark-border rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-4 mb-1">
             <div className="w-8 h-px bg-gold/40" />
-            <h2 className="font-serif text-2xl text-gold">Sort Order</h2>
+            <h2 className="font-serif text-2xl text-gold">{t.sortOrder}</h2>
           </div>
           <p className="text-gray-600 text-xs uppercase tracking-widest mb-6 ml-12">
-            Control the display order of categories and items on the menu
+            {t.sortOrderSubtitle}
           </p>
 
           {/* ── Category order ── */}
           <div className="mb-8">
-            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">Category Order</p>
+            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">{t.categoryOrder}</p>
             {selectedCategories.length === 0 ? (
-              <p className="text-gray-600 text-sm">No categories selected.</p>
+              <p className="text-gray-600 text-sm">{t.noCategories}</p>
             ) : (
               <div className="space-y-2">
                 {selectedCategories.map((cat, idx) => (
@@ -1678,7 +1686,7 @@ export default function Dashboard() {
                 onClick={saveCategoryOrder}
                 className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
               >
-                Save Category Order
+                {t.saveCategoryOrder}
               </button>
               {catOrderSaved && (
                 <motion.span
@@ -1694,9 +1702,9 @@ export default function Dashboard() {
 
           {/* ── Item order ── */}
           <div>
-            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">Item Order</p>
+            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">{t.itemOrder}</p>
             {selectedCategories.length === 0 ? (
-              <p className="text-gray-600 text-sm">No categories selected.</p>
+              <p className="text-gray-600 text-sm">{t.noCategories}</p>
             ) : (
               <>
                 {/* Category tabs */}
@@ -1720,7 +1728,7 @@ export default function Dashboard() {
                 {orderActiveCat && (() => {
                   const catItems = getSortedItemsForCategory(orderActiveCat);
                   return catItems.length === 0 ? (
-                    <p className="text-gray-600 text-sm py-3">No items in this category yet.</p>
+                    <p className="text-gray-600 text-sm py-3">{t.noItemsInCategory}</p>
                   ) : (
                     <div className="space-y-2">
                       {catItems.map((item, idx) => (
@@ -1759,9 +1767,10 @@ export default function Dashboard() {
                 <div className="flex items-center gap-4 mt-4">
                   <button
                     onClick={saveItemOrder}
-                    className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
+                    disabled={savingItemOrder}
+                    className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Save Item Order
+                    {savingItemOrder ? t.saving : t.saveItemOrder}
                   </button>
                   {itemOrderSaved && (
                     <motion.span
@@ -1770,6 +1779,15 @@ export default function Dashboard() {
                       className="text-emerald-400 text-sm"
                     >
                       ✓ {t.saved}
+                    </motion.span>
+                  )}
+                  {itemOrderError && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-red-400 text-sm"
+                    >
+                      {t.orderSaveError}
                     </motion.span>
                   )}
                 </div>
