@@ -1,0 +1,24 @@
+{
+  "name": "Luxe Kitchen — Fine Dining",
+  "short_name": "Luxe Kitchen",
+  "description": "Authentic flavors crafted with the finest ingredients",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#c9a84c",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

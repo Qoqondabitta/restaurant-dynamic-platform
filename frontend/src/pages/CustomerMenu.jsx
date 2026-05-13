@@ -252,14 +252,14 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       ref={ref}
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
-      className={`flex flex-col lg:grid lg:grid-cols-2 gap-3 lg:gap-16 lg:items-center py-5 md:py-8 lg:py-16 border-b border-dark-border last:border-0 ${
+      className={`flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-16 lg:items-center py-6 md:py-8 lg:py-16 border-b border-dark-border last:border-0 ${
         isGlobal ? 'rounded-2xl ring-1 ring-gold/20 px-4 -mx-4' : ''
       }`}
     >
       {/* Image */}
       <motion.div
         variants={imgVariant}
-        className={`relative overflow-hidden rounded-2xl aspect-[3/2] md:aspect-[4/3] w-full cursor-pointer ${
+        className={`relative overflow-hidden rounded-2xl aspect-video md:aspect-[4/3] w-full cursor-pointer ${
           isEven ? 'lg:order-1' : 'lg:order-2'
         }`}
         onClick={() => setPreview(resolveImage(item.image))}
@@ -305,7 +305,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
         </span>
 
         {/* ── Mobile: title + price side by side ── */}
-        <div className="flex items-start justify-between gap-3 mb-2 lg:hidden">
+        <div className="flex items-start justify-between gap-3 mb-3 lg:hidden">
           <h3 className="font-serif text-base md:text-xl text-cream leading-tight flex-1 min-w-0">
             {title}
           </h3>
@@ -385,7 +385,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
 
       {/* Ingredients — full-width row on mobile & tablet; hidden at desktop where it lives inside text column */}
       <div className="w-full order-3 lg:hidden">
-        <div className="flex items-center gap-4 mb-2 mt-1">
+        <div className="flex items-center gap-4 mb-3 mt-2">
           <div className="w-12 h-px bg-gold" />
           <div className="w-2 h-2 rounded-full bg-gold/60" />
           <div className="w-6 h-px bg-gold/40" />
@@ -795,7 +795,7 @@ export default function CustomerMenu() {
             </nav>
           </aside>
 
-          <main className="flex-1 min-w-0 px-4 md:px-8 py-12">
+          <main className="flex-1 min-w-0 px-5 md:px-8 py-12">
             {/* ── Mobile categories toggle button ── */}
             <div className="md:hidden mb-6">
               <button
@@ -873,7 +873,7 @@ export default function CustomerMenu() {
           </nav>
 
           {/* ── Menu Content ── */}
-          <main className="max-w-6xl mx-auto px-4 py-12">
+          <main className="max-w-6xl mx-auto px-5 py-12">
             {loading && (
               <div className="flex flex-col items-center justify-center h-64 gap-4">
                 <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
