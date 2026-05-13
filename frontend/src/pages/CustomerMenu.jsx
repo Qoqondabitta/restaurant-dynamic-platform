@@ -253,7 +253,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
       className={`flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-16 lg:items-center py-6 md:py-8 lg:py-16 border-b border-dark-border last:border-0 ${
-        isGlobal ? 'rounded-2xl ring-1 ring-gold/20 px-4 -mx-4' : ''
+        isGlobal ? 'rounded-2xl ring-1 ring-gold/20' : ''
       }`}
     >
       {/* Image */}
@@ -544,15 +544,11 @@ export default function CustomerMenu() {
       selectedCategories.reduce((acc, cat) => {
         const items = menuItems
           .filter((i) => i.category === cat)
-          .sort((a, b) => {
-            const aHas = getEffectiveDiscount(a, activeGlobalDiscount) !== null ? 1 : 0;
-            const bHas = getEffectiveDiscount(b, activeGlobalDiscount) !== null ? 1 : 0;
-            return bHas - aHas;
-          });
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
         if (items.length) acc[cat] = items;
         return acc;
       }, {}),
-    [selectedCategories, menuItems, activeGlobalDiscount] // eslint-disable-line
+    [selectedCategories, menuItems] // eslint-disable-line
   );
 
   // Initialise sidebar active category when layout or categories change
@@ -584,17 +580,13 @@ export default function CustomerMenu() {
     (i) => getEffectiveDiscount(i, activeGlobalDiscount) !== null
   );
 
-  // Group items by category — discounted items float to top
+  // Group items by category — ordered by owner-saved sortOrder
   const visibleCategories = activeTab === 'all' ? selectedCategories : [activeTab];
 
   const grouped = visibleCategories.reduce((acc, cat) => {
     const items = menuItems
       .filter((i) => i.category === cat)
-      .sort((a, b) => {
-        const aHas = getEffectiveDiscount(a, activeGlobalDiscount) !== null ? 1 : 0;
-        const bHas = getEffectiveDiscount(b, activeGlobalDiscount) !== null ? 1 : 0;
-        return bHas - aHas;
-      });
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     if (items.length) acc[cat] = items;
     return acc;
   }, {});
@@ -795,7 +787,7 @@ export default function CustomerMenu() {
             </nav>
           </aside>
 
-          <main className="flex-1 min-w-0 px-5 md:px-8 py-12">
+          <main className="flex-1 min-w-0 px-6 md:px-8 py-12">
             {/* ── Mobile categories toggle button ── */}
             <div className="md:hidden mb-6">
               <button
@@ -822,7 +814,7 @@ export default function CustomerMenu() {
                 {Object.entries(sidebarGrouped).map(([cat, items]) => (
                   <section key={cat} id={`category-${cat}`}>
                     <CategoryHeading displayName={t[cat] || cat} />
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-5">
                       {items.map((item, idx) => (
                         <MenuItemCard
                           key={item._id}
@@ -873,7 +865,7 @@ export default function CustomerMenu() {
           </nav>
 
           {/* ── Menu Content ── */}
-          <main className="max-w-6xl mx-auto px-5 py-12">
+          <main className="max-w-7xl mx-auto px-6 py-12">
             {loading && (
               <div className="flex flex-col items-center justify-center h-64 gap-4">
                 <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
@@ -897,7 +889,7 @@ export default function CustomerMenu() {
                   {Object.entries(grouped).map(([cat, items]) => (
                     <section key={cat} id={`category-${cat}`}>
                       <CategoryHeading displayName={t[cat] || cat} />
-                      <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-5">
                         {items.map((item, idx) => (
                           <MenuItemCard
                             key={item._id}

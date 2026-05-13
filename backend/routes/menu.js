@@ -3,11 +3,30 @@ const router = express.Router();
 const MenuItem = require('../models/MenuItem');
 const upload = require('../middleware/upload');
 
-// GET /menu — fetch all items, sorted by category
+// GET /menu — fetch all items, sorted by category then saved sortOrder
 router.get('/', async (req, res) => {
   try {
-    const items = await MenuItem.find().sort({ category: 1, createdAt: -1 });
+    const items = await MenuItem.find().sort({ category: 1, sortOrder: 1, createdAt: -1 });
     res.json(items);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /menu/reorder — bulk-update sortOrder for a list of items
+// Must be declared before PUT /:id so Express doesn't treat "reorder" as an id
+router.put('/reorder', async (req, res) => {
+  try {
+    const { orders } = req.body; // [{ _id, sortOrder }, ...]
+    if (!Array.isArray(orders)) {
+      return res.status(400).json({ message: 'orders must be an array' });
+    }
+    await Promise.all(
+      orders.map(({ _id, sortOrder }) =>
+        MenuItem.findByIdAndUpdate(_id, { sortOrder: Number(sortOrder) })
+      )
+    );
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -5,6 +5,7 @@ import {
   addMenuItem,
   updateMenuItem,
   deleteMenuItem,
+  reorderMenuItems,
   resolveImage,
 } from '../api/menu';
 import {
@@ -1174,6 +1175,11 @@ export default function Dashboard() {
   // Layout selection
   const [menuLayout, setMenuLayout] = useState('top');
   const [layoutSaved, setLayoutSaved] = useState(false);
+  // Sort order
+  const [localItemOrder, setLocalItemOrder] = useState({});   // { [cat]: [_id, ...] }
+  const [orderActiveCat, setOrderActiveCat] = useState('');
+  const [catOrderSaved, setCatOrderSaved] = useState(false);
+  const [itemOrderSaved, setItemOrderSaved] = useState(false);
 
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
     enabledLangCodes.includes(l.code)
@@ -1254,6 +1260,100 @@ export default function Dashboard() {
       await updateSettings({ languages: enabledLangCodes, categories: selectedCategories, layout: menuLayout });
       setLayoutSaved(true);
       setTimeout(() => setLayoutSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ── Sort-order helpers ────────────────────────────────────────────────────
+
+  // Rebuild localItemOrder from server data whenever items/categories change.
+  // Uses server-side sortOrder so the panel always reflects persisted state.
+  useEffect(() => {
+    const order = {};
+    selectedCategories.forEach((cat) => {
+      order[cat] = items
+        .filter((i) => i.category === cat)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((i) => i._id);
+    });
+    setLocalItemOrder(order);
+  }, [items, selectedCategories]);
+
+  // Keep orderActiveCat pointing at a valid category
+  useEffect(() => {
+    setOrderActiveCat((prev) => {
+      if (!prev && selectedCategories.length > 0) return selectedCategories[0];
+      if (prev && !selectedCategories.includes(prev) && selectedCategories.length > 0) return selectedCategories[0];
+      return prev;
+    });
+  }, [selectedCategories]);
+
+  const moveCategoryUp = (idx) => {
+    if (idx === 0) return;
+    setCatOrderSaved(false);
+    setSelectedCategories((prev) => {
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  };
+
+  const moveCategoryDown = (idx) => {
+    setCatOrderSaved(false);
+    setSelectedCategories((prev) => {
+      if (idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+  };
+
+  const saveCategoryOrder = async () => {
+    try {
+      await updateSettings({ languages: enabledLangCodes, categories: selectedCategories, layout: menuLayout });
+      setCatOrderSaved(true);
+      setTimeout(() => setCatOrderSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const getSortedItemsForCategory = (cat) => {
+    const ids = localItemOrder[cat] || [];
+    return ids.map((id) => items.find((i) => i._id === id)).filter(Boolean);
+  };
+
+  const moveItemUp = (cat, idx) => {
+    if (idx === 0) return;
+    setItemOrderSaved(false);
+    setLocalItemOrder((prev) => {
+      const ids = [...(prev[cat] || [])];
+      [ids[idx - 1], ids[idx]] = [ids[idx], ids[idx - 1]];
+      return { ...prev, [cat]: ids };
+    });
+  };
+
+  const moveItemDown = (cat, idx) => {
+    setItemOrderSaved(false);
+    setLocalItemOrder((prev) => {
+      const ids = [...(prev[cat] || [])];
+      if (idx >= ids.length - 1) return prev;
+      [ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
+      return { ...prev, [cat]: ids };
+    });
+  };
+
+  const saveItemOrder = async () => {
+    try {
+      const orders = [];
+      Object.entries(localItemOrder).forEach(([, ids]) => {
+        ids.forEach((id, idx) => orders.push({ _id: id, sortOrder: idx }));
+      });
+      await reorderMenuItems(orders);
+      setItemOrderSaved(true);
+      setTimeout(() => setItemOrderSaved(false), 3000);
+      await loadAll();
     } catch (err) {
       console.error(err);
     }
@@ -1528,6 +1628,152 @@ export default function Dashboard() {
               >
                 ✓ {t.saved}
               </motion.span>
+            )}
+          </div>
+        </div>
+
+        {/* ── Sort Order ── */}
+        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 mb-6">
+          <div className="flex items-center gap-4 mb-1">
+            <div className="w-8 h-px bg-gold/40" />
+            <h2 className="font-serif text-2xl text-gold">Sort Order</h2>
+          </div>
+          <p className="text-gray-600 text-xs uppercase tracking-widest mb-6 ml-12">
+            Control the display order of categories and items on the menu
+          </p>
+
+          {/* ── Category order ── */}
+          <div className="mb-8">
+            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">Category Order</p>
+            {selectedCategories.length === 0 ? (
+              <p className="text-gray-600 text-sm">No categories selected.</p>
+            ) : (
+              <div className="space-y-2">
+                {selectedCategories.map((cat, idx) => (
+                  <div
+                    key={cat}
+                    className="flex items-center gap-3 bg-dark border border-dark-border rounded-xl px-4 py-2.5"
+                  >
+                    <span className="text-gray-600 text-xs font-mono w-5 text-center">{idx + 1}</span>
+                    <span className="text-base leading-none">{CATEGORY_ICONS[cat] || '·'}</span>
+                    <span className="text-cream text-sm font-semibold flex-1 truncate">{t[cat] || cat}</span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => moveCategoryUp(idx)}
+                        disabled={idx === 0}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
+                      >↑</button>
+                      <button
+                        onClick={() => moveCategoryDown(idx)}
+                        disabled={idx === selectedCategories.length - 1}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
+                      >↓</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-4 mt-4">
+              <button
+                onClick={saveCategoryOrder}
+                className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
+              >
+                Save Category Order
+              </button>
+              {catOrderSaved && (
+                <motion.span
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-emerald-400 text-sm"
+                >
+                  ✓ {t.saved}
+                </motion.span>
+              )}
+            </div>
+          </div>
+
+          {/* ── Item order ── */}
+          <div>
+            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">Item Order</p>
+            {selectedCategories.length === 0 ? (
+              <p className="text-gray-600 text-sm">No categories selected.</p>
+            ) : (
+              <>
+                {/* Category tabs */}
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
+                  {selectedCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setOrderActiveCat(cat)}
+                      className={`flex-shrink-0 px-4 py-2 rounded-xl border text-xs font-semibold uppercase tracking-widest transition-all duration-200 ${
+                        orderActiveCat === cat
+                          ? 'border-gold bg-gold/10 text-gold'
+                          : 'border-dark-border text-gray-500 hover:border-gold/20 hover:text-gray-300'
+                      }`}
+                    >
+                      {CATEGORY_ICONS[cat] || ''} {t[cat] || cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Items list for active category */}
+                {orderActiveCat && (() => {
+                  const catItems = getSortedItemsForCategory(orderActiveCat);
+                  return catItems.length === 0 ? (
+                    <p className="text-gray-600 text-sm py-3">No items in this category yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {catItems.map((item, idx) => (
+                        <div
+                          key={item._id}
+                          className="flex items-center gap-3 bg-dark border border-dark-border rounded-xl px-4 py-2.5"
+                        >
+                          <span className="text-gray-600 text-xs font-mono w-5 text-center">{idx + 1}</span>
+                          <img
+                            src={resolveImage(item.image)}
+                            alt=""
+                            className="w-10 h-8 object-cover rounded-lg flex-shrink-0"
+                            onError={(e) => { e.target.src = 'https://placehold.co/40x32/141414/c9a84c?text=·'; }}
+                          />
+                          <span className="text-cream text-sm flex-1 min-w-0 truncate">
+                            {getEn(item.title)}
+                          </span>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => moveItemUp(orderActiveCat, idx)}
+                              disabled={idx === 0}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
+                            >↑</button>
+                            <button
+                              onClick={() => moveItemDown(orderActiveCat, idx)}
+                              disabled={idx === catItems.length - 1}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
+                            >↓</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                <div className="flex items-center gap-4 mt-4">
+                  <button
+                    onClick={saveItemOrder}
+                    className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
+                  >
+                    Save Item Order
+                  </button>
+                  {itemOrderSaved && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-emerald-400 text-sm"
+                    >
+                      ✓ {t.saved}
+                    </motion.span>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>

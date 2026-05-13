@@ -19,6 +19,7 @@ const menuItemSchema = new mongoose.Schema(
       percentage: { type: Number, default: 0, min: 0, max: 100 },
       isActive:   { type: Boolean, default: false },
     },
+    sortOrder: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
