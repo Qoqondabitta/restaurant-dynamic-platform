@@ -5,7 +5,6 @@ import {
   addMenuItem,
   updateMenuItem,
   deleteMenuItem,
-  reorderMenuItems,
   resolveImage,
 } from '../api/menu';
 import {
@@ -1056,12 +1055,35 @@ export default function Dashboard() {
         fetchDiscounts(),
         fetchSettings(),
       ]);
-      setItems(menuRes.data);
+      const menuItems = menuRes.data;
+      setItems(menuItems);
       setDiscounts(discountRes.data);
       setEnabledLangCodes(settingsRes.data.languages || ['en']);
       const cats = settingsRes.data.categories;
-      setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
+      const validCats = Array.isArray(cats) && cats.length ? cats : ['main'];
+      setSelectedCategories(validCats);
       if (settingsRes.data.layout === 'sidebar') setMenuLayout('sidebar');
+
+      // Build localItemOrder from saved settings, falling back to sortOrder for new items
+      const savedOrder = settingsRes.data.itemOrder || {};
+      const order = {};
+      validCats.forEach((cat) => {
+        const catItems = menuItems.filter((i) => i.category === cat);
+        if (savedOrder[cat] && savedOrder[cat].length > 0) {
+          const existingIds = new Set(catItems.map((i) => String(i._id)));
+          const validIds = savedOrder[cat].filter((id) => existingIds.has(id));
+          const savedSet = new Set(validIds);
+          const newItems = catItems
+            .filter((i) => !savedSet.has(String(i._id)))
+            .map((i) => String(i._id));
+          order[cat] = [...validIds, ...newItems];
+        } else {
+          order[cat] = catItems
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            .map((i) => String(i._id));
+        }
+      });
+      setLocalItemOrder(order);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1131,19 +1153,6 @@ export default function Dashboard() {
 
   // ── Sort-order helpers ────────────────────────────────────────────────────
 
-  // Rebuild localItemOrder from server data whenever items/categories change.
-  // Uses server-side sortOrder so the panel always reflects persisted state.
-  useEffect(() => {
-    const order = {};
-    selectedCategories.forEach((cat) => {
-      order[cat] = items
-        .filter((i) => i.category === cat)
-        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-        .map((i) => String(i._id));
-    });
-    setLocalItemOrder(order);
-  }, [items, selectedCategories]);
-
   // Keep orderActiveCat pointing at a valid category
   useEffect(() => {
     setOrderActiveCat((prev) => {
@@ -1183,11 +1192,6 @@ export default function Dashboard() {
     }
   };
 
-  const getSortedItemsForCategory = (cat) => {
-    const ids = localItemOrder[cat] || [];
-    return ids.map((id) => items.find((i) => i._id === id)).filter(Boolean);
-  };
-
   const moveItemUp = (cat, idx) => {
     if (idx === 0) return;
     setItemOrderSaved(false);
@@ -1212,17 +1216,11 @@ export default function Dashboard() {
     setSavingItemOrder(true);
     setItemOrderError(false);
     try {
-      const orders = [];
-      Object.entries(localItemOrder).forEach(([, ids]) => {
-        ids.forEach((id, idx) => orders.push({ _id: String(id), sortOrder: idx }));
-      });
-      if (orders.length === 0) return;
-      await reorderMenuItems(orders);
-      await loadAll();
+      await updateSettings({ languages: enabledLangCodes, categories: selectedCategories, layout: menuLayout, itemOrder: localItemOrder });
       setItemOrderSaved(true);
       setTimeout(() => setItemOrderSaved(false), 3000);
     } catch (err) {
-      console.error('saveItemOrder error:', err.response?.data ?? err.message);
+      console.error('saveItemOrder error:', err);
       setItemOrderError(true);
       setTimeout(() => setItemOrderError(false), 4000);
     } finally {

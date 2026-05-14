@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\turgu\\\\restaurant-platform\\\\frontend\" -Filter \".env*\" -Force)",
+      "Bash(Select-Object Name, FullName)",
+      "Bash(node -e \"const m = require\\('mongoose'\\); console.log\\('mongoose:', m.version\\); const MenuItem = require\\('./models/MenuItem'\\); console.log\\('_id type:', MenuItem.schema.path\\('_id'\\).instance\\)\")"
+    ]
+  }
+}

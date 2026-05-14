@@ -17,10 +17,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /settings — save languages + optional categories; returns non-blocking warnings
+// PUT /settings — save languages + optional categories/itemOrder; returns non-blocking warnings
 router.put('/', async (req, res) => {
   try {
-    const { languages, categories: selectedCategories, layout } = req.body;
+    const { languages, categories: selectedCategories, layout, itemOrder } = req.body;
     if (!Array.isArray(languages) || languages.length === 0) {
       return res.status(400).json({ message: 'At least one language is required' });
     }
@@ -36,6 +36,9 @@ router.put('/', async (req, res) => {
     if (layout === 'top' || layout === 'sidebar') {
       updatePayload.layout = layout;
     }
+    if (itemOrder && typeof itemOrder === 'object') {
+      updatePayload.itemOrder = itemOrder;
+    }
 
     // Save settings — never blocked
     const settings = await RestaurantSettings.findOneAndUpdate(
@@ -43,6 +46,16 @@ router.put('/', async (req, res) => {
       updatePayload,
       { upsert: true, new: true, runValidators: true }
     );
+
+    // Sync sortOrder on MenuItem docs so GET /menu sort reflects the saved order.
+    // findByIdAndUpdate is used (not bulkWrite) because it reliably casts string ids to ObjectId.
+    if (itemOrder && typeof itemOrder === 'object') {
+      const syncOps = [];
+      for (const [, ids] of Object.entries(itemOrder)) {
+        ids.forEach((id, idx) => syncOps.push(MenuItem.findByIdAndUpdate(id, { sortOrder: idx })));
+      }
+      if (syncOps.length > 0) await Promise.all(syncOps);
+    }
 
     // Non-blocking validation: detect items missing translations
     const items = await MenuItem.find();
