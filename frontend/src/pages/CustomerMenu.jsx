@@ -252,9 +252,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       ref={ref}
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
-      className={`flex flex-col lg:grid lg:grid-cols-2 gap-5 md:gap-6 lg:gap-16 lg:items-center pt-5 pb-7 md:pt-6 md:pb-9 lg:py-16 border-b border-dark-border last:border-0 ${
-        isGlobal ? 'rounded-2xl ring-1 ring-gold/20' : ''
-      }`}
+      className="flex flex-col lg:grid lg:grid-cols-2 gap-5 md:gap-6 lg:gap-16 lg:items-center pt-5 pb-7 md:pt-6 md:pb-9 lg:py-16 border-b border-dark-border last:border-0"
     >
       {/* Image */}
       <motion.div
