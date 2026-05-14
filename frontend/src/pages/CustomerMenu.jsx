@@ -252,7 +252,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       ref={ref}
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
-      className={`flex flex-col lg:grid lg:grid-cols-2 gap-5 md:gap-6 lg:gap-16 lg:items-center py-8 md:py-10 lg:py-16 border-b border-dark-border last:border-0 ${
+      className={`flex flex-col lg:grid lg:grid-cols-2 gap-5 md:gap-6 lg:gap-16 lg:items-center pt-5 pb-7 md:pt-6 md:pb-9 lg:py-16 border-b border-dark-border last:border-0 ${
         isGlobal ? 'rounded-2xl ring-1 ring-gold/20' : ''
       }`}
     >
@@ -295,7 +295,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       {/* Text */}
       <motion.div
         variants={textVariant}
-        className={`flex flex-col justify-center w-full lg:flex-1 lg:min-w-0 px-2 sm:px-3 lg:px-0 ${
+        className={`flex flex-col justify-center w-full lg:flex-1 lg:min-w-0 px-3 sm:px-4 lg:px-0 ${
           isEven ? 'lg:order-2' : 'lg:order-1'
         }`}
       >
@@ -384,7 +384,7 @@ function MenuItemCard({ item, index, activeGlobalDiscount }) {
       </motion.div>
 
       {/* Ingredients — full-width row on mobile & tablet; hidden at desktop where it lives inside text column */}
-      <div className="w-full order-3 lg:hidden px-2 sm:px-3">
+      <div className="w-full order-3 lg:hidden px-3 sm:px-4">
         <div className="flex items-center gap-4 mb-3 mt-3">
           <div className="w-12 h-px bg-gold" />
           <div className="w-2 h-2 rounded-full bg-gold/60" />

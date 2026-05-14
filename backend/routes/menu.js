@@ -18,13 +18,16 @@ router.get('/', async (req, res) => {
 router.put('/reorder', async (req, res) => {
   try {
     const { orders } = req.body; // [{ _id, sortOrder }, ...]
-    if (!Array.isArray(orders)) {
-      return res.status(400).json({ message: 'orders must be an array' });
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return res.status(400).json({ message: 'orders must be a non-empty array' });
     }
-    await Promise.all(
-      orders.map(({ _id, sortOrder }) =>
-        MenuItem.findByIdAndUpdate(_id, { sortOrder: Number(sortOrder) })
-      )
+    await MenuItem.bulkWrite(
+      orders.map(({ _id, sortOrder }) => ({
+        updateOne: {
+          filter: { _id: String(_id) },
+          update: { $set: { sortOrder: Number(sortOrder) } },
+        },
+      }))
     );
     res.json({ success: true });
   } catch (err) {

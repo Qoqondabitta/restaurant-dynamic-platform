@@ -16,8 +16,15 @@ import {
 } from '../api/discounts';
 import { fetchSettings, updateSettings } from '../api/settings';
 import { useLanguage } from '../context/LanguageContext';
-import { LANGUAGES } from '../config/languages';
 import { DEFAULT_CATEGORIES, CATEGORY_ICONS } from '../config/categories';
+import DashboardHeader from '../components/dashboard/DashboardHeader';
+import LanguageSettings from '../components/dashboard/LanguageSettings';
+import CategorySettings from '../components/dashboard/CategorySettings';
+import LayoutSwitcher from '../components/dashboard/LayoutSwitcher';
+import CategoryOrderSection from '../components/dashboard/CategoryOrderSection';
+import ItemOrderSection from '../components/dashboard/ItemOrderSection';
+import MenuPreviewSection from '../components/dashboard/MenuPreviewSection';
+import DiscountSettings from '../components/dashboard/DiscountSettings';
 
 const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -907,151 +914,6 @@ const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', RUB: '₽', UZS: "so'm", PLN: '
 const fmtPrice = (price, currency) =>
   `${CURRENCY_SYMBOLS[currency] || '$'}${Number(price).toFixed(2)}`;
 
-// ─── Menu Item Card (dashboard) ──────────────────────────────────────────────
-function DashboardCard({ item, onEdit, onDelete }) {
-  const { t, lang } = useLanguage();
-  const d = item.discount;
-  const hasDiscount = d && d.isActive && d.percentage > 0;
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.25 }}
-      className="bg-dark-card border border-dark-border rounded-2xl overflow-hidden hover:border-gold/20 transition-all duration-300 group"
-    >
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          src={resolveImage(item.image)}
-          alt={typeof item.title === 'string' ? item.title : (item.title?.[lang] || item.title?.en || '')}
-          loading="lazy"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={(e) => {
-            e.target.src = 'https://placehold.co/600x400/141414/c9a84c?text=No+Image';
-          }}
-        />
-        <span className="absolute top-3 left-3 bg-gold/90 text-dark text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
-          {t[item.category] || item.category}
-        </span>
-        {hasDiscount && (
-          <span className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">
-            -{d.percentage}% {t.off}
-          </span>
-        )}
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className="font-serif text-lg text-cream leading-tight">
-            {typeof item.title === 'string' ? item.title : (item.title?.[lang] || item.title?.en || '')}
-          </h3>
-          <div className="text-right">
-            {hasDiscount ? (
-              <>
-                <span className="block text-gray-500 text-xs line-through">
-                  {fmtPrice(item.price, item.currency)}
-                </span>
-                <span className="text-gold font-semibold text-sm">
-                  {fmtPrice(item.price * (1 - d.percentage / 100), item.currency)}
-                </span>
-              </>
-            ) : (
-              <span className="text-gold font-semibold text-sm whitespace-nowrap">
-                {fmtPrice(item.price, item.currency)}
-              </span>
-            )}
-          </div>
-        </div>
-        <p className="text-gray-500 text-xs leading-relaxed mb-4 line-clamp-2">
-          {typeof item.ingredients === 'string' ? item.ingredients : (item.ingredients?.[lang] || item.ingredients?.en || '')}
-        </p>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(item)}
-            className="flex-1 py-2 text-xs font-semibold uppercase tracking-widest border border-gold/30 text-gold rounded-lg hover:bg-gold hover:text-dark transition-all duration-200"
-          >
-            {t.edit}
-          </button>
-          <button
-            onClick={() => onDelete(item)}
-            className="flex-1 py-2 text-xs font-semibold uppercase tracking-widest border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-200"
-          >
-            {t.delete}
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Discount Row ─────────────────────────────────────────────────────────────
-function DiscountRow({ discount, onEdit, onDelete }) {
-  const { t } = useLanguage();
-  const now = new Date();
-  const isLive =
-    discount.isActive &&
-    now >= new Date(discount.startTime) &&
-    now <= new Date(discount.endTime);
-
-  const fmtDt = (dt) =>
-    new Date(dt).toLocaleString([], {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-dark border border-dark-border rounded-xl hover:border-gold/20 transition-colors"
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="font-serif text-cream text-base">{discount.title}</span>
-          {isLive && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {t.activeNow}
-            </span>
-          )}
-          {!discount.isActive && (
-            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest bg-dark-border px-2 py-0.5 rounded-full">
-              Off
-            </span>
-          )}
-        </div>
-        <p className="text-gray-500 text-xs">
-          {discount.appliesTo} · {fmtDt(discount.startTime)} → {fmtDt(discount.endTime)}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-4 shrink-0">
-        <span className="text-gold font-serif text-2xl font-bold">-{discount.percentage}%</span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(discount)}
-            className="px-3 py-1.5 text-xs font-semibold uppercase tracking-widest border border-gold/30 text-gold rounded-lg hover:bg-gold hover:text-dark transition-all"
-          >
-            {t.edit}
-          </button>
-          <button
-            onClick={() => onDelete(discount)}
-            className="px-3 py-1.5 text-xs font-semibold uppercase tracking-widest border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all"
-          >
-            {t.delete}
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
 // ─── Translation Warning Modal ───────────────────────────────────────────────
 function TranslationWarningModal({ warnings, onClose }) {
@@ -1277,7 +1139,7 @@ export default function Dashboard() {
       order[cat] = items
         .filter((i) => i.category === cat)
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-        .map((i) => i._id);
+        .map((i) => String(i._id));
     });
     setLocalItemOrder(order);
   }, [items, selectedCategories]);
@@ -1352,14 +1214,15 @@ export default function Dashboard() {
     try {
       const orders = [];
       Object.entries(localItemOrder).forEach(([, ids]) => {
-        ids.forEach((id, idx) => orders.push({ _id: id, sortOrder: idx }));
+        ids.forEach((id, idx) => orders.push({ _id: String(id), sortOrder: idx }));
       });
+      if (orders.length === 0) return;
       await reorderMenuItems(orders);
       await loadAll();
       setItemOrderSaved(true);
       setTimeout(() => setItemOrderSaved(false), 3000);
     } catch (err) {
-      console.error(err);
+      console.error('saveItemOrder error:', err.response?.data ?? err.message);
       setItemOrderError(true);
       setTimeout(() => setItemOrderError(false), 4000);
     } finally {
@@ -1413,232 +1276,43 @@ export default function Dashboard() {
     return acc;
   }, {});
 
+  const handleAddItem = () => {
+    setEditItem(null);
+    if (enabledLangCodes.length === 1) {
+      setShowLangWarning(true);
+    } else {
+      setShowAddModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-dark pt-16">
-      {/* ── Top bar ── */}
-      <div className="bg-dark-card border-b border-dark-border px-6 py-5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-2xl text-gold">{t.restaurantDashboard}</h1>
-            <p className="text-gray-600 text-xs mt-0.5 uppercase tracking-wider">
-              {items.length} {t.itemsInMenu}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setEditItem(null);
-              if (enabledLangCodes.length === 1) {
-                setShowLangWarning(true);
-              } else {
-                setShowAddModal(true);
-              }
-            }}
-            className="flex items-center gap-2 bg-gold hover:bg-gold-light text-dark text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors duration-200"
-          >
-            <span className="text-base leading-none">+</span>
-            {t.addItem}
-          </button>
-        </div>
-      </div>
+      <DashboardHeader itemCount={items.length} onAddItem={handleAddItem} />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* ── Menu Language Settings ── */}
-        <div id="lang-settings-top" className="mb-8 border-b border-dark-border pb-8">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-8 h-px bg-gold/40" />
-            <h2 className="font-serif text-2xl text-gold">{t.menuLanguages}</h2>
-          </div>
-          <p className="text-gray-600 text-xs uppercase tracking-widest mb-5 ml-12">
-            {t.langSettingsSubtitle}
-          </p>
+        <LanguageSettings
+          enabledLangCodes={enabledLangCodes}
+          langDropdownRef={langDropdownRef}
+          langDropdownOpen={langDropdownOpen}
+          settingsSaved={settingsSaved}
+          onToggleLang={toggleLang}
+          onSaveLanguageSettings={saveLanguageSettings}
+          onToggleDropdown={() => setLangDropdownOpen((o) => !o)}
+        />
 
-          {/* Multi-select language dropdown */}
-          <div ref={langDropdownRef} className="relative inline-block mb-5">
-            <button
-              onClick={() => setLangDropdownOpen((o) => !o)}
-              className="flex items-center gap-2 bg-dark border border-dark-border rounded-xl px-4 py-2.5 min-w-[260px] hover:border-gold/30 transition-colors"
-            >
-              <div className="flex items-center gap-1.5 flex-wrap flex-1">
-                {enabledLangCodes.length === 0 ? (
-                  <span className="text-gray-500 text-sm">Select languages…</span>
-                ) : (
-                  enabledLangCodes.map((code) => (
-                    <span
-                      key={code}
-                      className="flex items-center gap-1 bg-gold/10 border border-gold/20 rounded-md px-1.5 py-0.5"
-                    >
-                      <img
-                        src={LANGUAGES[code]?.flag}
-                        alt={code}
-                        className="w-4 h-3 object-cover rounded-sm"
-                      />
-                      <span className="text-gold text-[10px] font-semibold uppercase">
-                        {LANGUAGES[code]?.label || code.toUpperCase()}
-                      </span>
-                    </span>
-                  ))
-                )}
-              </div>
-              <span className="text-gray-500 text-[10px] flex-shrink-0">▼</span>
-            </button>
+        <CategorySettings
+          selectedCategories={selectedCategories}
+          categoriesSaved={categoriesSaved}
+          onToggleCategory={toggleCategory}
+          onSaveCategories={saveCategories}
+        />
 
-            <AnimatePresence>
-              {langDropdownOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute left-0 top-full mt-2 bg-dark-card border border-dark-border rounded-xl shadow-2xl z-50 w-64 max-h-72 overflow-y-auto"
-                >
-                  {Object.entries(LANGUAGES).map(([code, { label, flag }]) => {
-                    const checked = enabledLangCodes.includes(code);
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        onClick={() => toggleLang(code)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-colors hover:bg-white/5 ${
-                          checked ? 'text-gold' : 'text-gray-400'
-                        }`}
-                      >
-                        <span
-                          className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-[10px] font-bold transition-colors ${
-                            checked
-                              ? 'bg-gold/20 border-gold/50 text-gold'
-                              : 'border-dark-border text-transparent'
-                          }`}
-                        >
-                          ✓
-                        </span>
-                        <img src={flag} alt={code} className="w-5 h-4 object-cover rounded-sm flex-shrink-0" />
-                        <span className="font-semibold uppercase tracking-widest">{label}</span>
-                      </button>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={saveLanguageSettings}
-              className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
-            >
-              {t.saveLanguages}
-            </button>
-            {settingsSaved && (
-              <motion.span
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-emerald-400 text-sm"
-              >
-                ✓ {t.saved}
-              </motion.span>
-            )}
-          </div>
-        </div>
-
-        {/* ── Menu Categories Section ── */}
-        <div className="mb-8 border-b border-dark-border pb-8">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-8 h-px bg-gold/40" />
-            <h2 className="font-serif text-2xl text-gold">{t.menuCategories}</h2>
-          </div>
-          <p className="text-gray-600 text-xs uppercase tracking-widest mb-5 ml-12">
-            {t.categorySettingsSubtitle}
-          </p>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-5">
-            {DEFAULT_CATEGORIES.map((cat) => {
-              const checked = selectedCategories.includes(cat);
-              return (
-                <label
-                  key={cat}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-150 select-none ${
-                    checked
-                      ? 'bg-gold/10 border-gold/40 text-gold'
-                      : 'border-dark-border text-gray-500 hover:border-gold/20 hover:text-gray-300'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleCategory(cat)}
-                    className="sr-only"
-                  />
-                  <span className="text-base leading-none">{CATEGORY_ICONS[cat]}</span>
-                  <span className="text-xs font-semibold uppercase tracking-wide truncate">
-                    {t[cat] || cat}
-                  </span>
-                  {checked && (
-                    <span className="ml-auto text-gold text-[10px] font-bold leading-none">✓</span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={saveCategories}
-              className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
-            >
-              {t.saveCategories}
-            </button>
-            {categoriesSaved && (
-              <motion.span
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-emerald-400 text-sm"
-              >
-                ✓ {t.saved}
-              </motion.span>
-            )}
-          </div>
-        </div>
-
-        {/* ── Menu Layout ── */}
-        <div className="bg-dark-card border border-dark-border rounded-2xl p-6 mb-6">
-          <h3 className="text-cream font-semibold text-base mb-1">{t.menuLayout}</h3>
-          <p className="text-gray-500 text-sm mb-4">{t.menuLayoutSubtitle}</p>
-          <div className="flex gap-3 mb-5">
-            {['top', 'sidebar'].map((option) => (
-              <button
-                key={option}
-                onClick={() => { setMenuLayout(option); setLayoutSaved(false); }}
-                className={`flex-1 py-3 rounded-xl border text-sm font-semibold transition-all duration-200 ${
-                  menuLayout === option
-                    ? 'border-gold bg-gold/10 text-gold'
-                    : 'border-dark-border bg-dark text-gray-400 hover:border-gold/30 hover:text-gray-200'
-                }`}
-              >
-                {option === 'top' ? t.topLayout : t.sidebarLayout}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={saveLayout}
-              className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
-            >
-              {t.saveLayout}
-            </button>
-            {layoutSaved && (
-              <motion.span
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-emerald-400 text-sm"
-              >
-                ✓ {t.saved}
-              </motion.span>
-            )}
-          </div>
-        </div>
+        <LayoutSwitcher
+          menuLayout={menuLayout}
+          layoutSaved={layoutSaved}
+          onSetLayout={(option) => { setMenuLayout(option); setLayoutSaved(false); }}
+          onSaveLayout={saveLayout}
+        />
 
         {/* ── Sort Order ── */}
         <div className="bg-dark-card border border-dark-border rounded-2xl p-6 mb-6">
@@ -1649,256 +1323,46 @@ export default function Dashboard() {
           <p className="text-gray-600 text-xs uppercase tracking-widest mb-6 ml-12">
             {t.sortOrderSubtitle}
           </p>
-
-          {/* ── Category order ── */}
-          <div className="mb-8">
-            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">{t.categoryOrder}</p>
-            {selectedCategories.length === 0 ? (
-              <p className="text-gray-600 text-sm">{t.noCategories}</p>
-            ) : (
-              <div className="space-y-2">
-                {selectedCategories.map((cat, idx) => (
-                  <div
-                    key={cat}
-                    className="flex items-center gap-3 bg-dark border border-dark-border rounded-xl px-4 py-2.5"
-                  >
-                    <span className="text-gray-600 text-xs font-mono w-5 text-center">{idx + 1}</span>
-                    <span className="text-base leading-none">{CATEGORY_ICONS[cat] || '·'}</span>
-                    <span className="text-cream text-sm font-semibold flex-1 truncate">{t[cat] || cat}</span>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => moveCategoryUp(idx)}
-                        disabled={idx === 0}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
-                      >↑</button>
-                      <button
-                        onClick={() => moveCategoryDown(idx)}
-                        disabled={idx === selectedCategories.length - 1}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
-                      >↓</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center gap-4 mt-4">
-              <button
-                onClick={saveCategoryOrder}
-                className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200"
-              >
-                {t.saveCategoryOrder}
-              </button>
-              {catOrderSaved && (
-                <motion.span
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="text-emerald-400 text-sm"
-                >
-                  ✓ {t.saved}
-                </motion.span>
-              )}
-            </div>
-          </div>
-
-          {/* ── Item order ── */}
-          <div>
-            <p className="text-gold text-xs font-bold uppercase tracking-[0.3em] mb-3">{t.itemOrder}</p>
-            {selectedCategories.length === 0 ? (
-              <p className="text-gray-600 text-sm">{t.noCategories}</p>
-            ) : (
-              <>
-                {/* Category tabs */}
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
-                  {selectedCategories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setOrderActiveCat(cat)}
-                      className={`flex-shrink-0 px-4 py-2 rounded-xl border text-xs font-semibold uppercase tracking-widest transition-all duration-200 ${
-                        orderActiveCat === cat
-                          ? 'border-gold bg-gold/10 text-gold'
-                          : 'border-dark-border text-gray-500 hover:border-gold/20 hover:text-gray-300'
-                      }`}
-                    >
-                      {CATEGORY_ICONS[cat] || ''} {t[cat] || cat}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Items list for active category */}
-                {orderActiveCat && (() => {
-                  const catItems = getSortedItemsForCategory(orderActiveCat);
-                  return catItems.length === 0 ? (
-                    <p className="text-gray-600 text-sm py-3">{t.noItemsInCategory}</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {catItems.map((item, idx) => (
-                        <div
-                          key={item._id}
-                          className="flex items-center gap-3 bg-dark border border-dark-border rounded-xl px-4 py-2.5"
-                        >
-                          <span className="text-gray-600 text-xs font-mono w-5 text-center">{idx + 1}</span>
-                          <img
-                            src={resolveImage(item.image)}
-                            alt=""
-                            className="w-10 h-8 object-cover rounded-lg flex-shrink-0"
-                            onError={(e) => { e.target.src = 'https://placehold.co/40x32/141414/c9a84c?text=·'; }}
-                          />
-                          <span className="text-cream text-sm flex-1 min-w-0 truncate">
-                            {getEn(item.title)}
-                          </span>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => moveItemUp(orderActiveCat, idx)}
-                              disabled={idx === 0}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
-                            >↑</button>
-                            <button
-                              onClick={() => moveItemDown(orderActiveCat, idx)}
-                              disabled={idx === catItems.length - 1}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg border border-dark-border text-gray-500 hover:border-gold/40 hover:text-gold disabled:opacity-25 disabled:cursor-not-allowed transition-all text-xs"
-                            >↓</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                <div className="flex items-center gap-4 mt-4">
-                  <button
-                    onClick={saveItemOrder}
-                    disabled={savingItemOrder}
-                    className="px-5 py-2.5 bg-gold hover:bg-gold-light text-dark text-sm font-semibold rounded-xl transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {savingItemOrder ? t.saving : t.saveItemOrder}
-                  </button>
-                  {itemOrderSaved && (
-                    <motion.span
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="text-emerald-400 text-sm"
-                    >
-                      ✓ {t.saved}
-                    </motion.span>
-                  )}
-                  {itemOrderError && (
-                    <motion.span
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="text-red-400 text-sm"
-                    >
-                      {t.orderSaveError}
-                    </motion.span>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+          <CategoryOrderSection
+            selectedCategories={selectedCategories}
+            catOrderSaved={catOrderSaved}
+            onMoveUp={moveCategoryUp}
+            onMoveDown={moveCategoryDown}
+            onSaveCategoryOrder={saveCategoryOrder}
+          />
+          <ItemOrderSection
+            selectedCategories={selectedCategories}
+            orderActiveCat={orderActiveCat}
+            localItemOrder={localItemOrder}
+            items={items}
+            itemOrderSaved={itemOrderSaved}
+            itemOrderError={itemOrderError}
+            savingItemOrder={savingItemOrder}
+            onSetActiveCat={setOrderActiveCat}
+            onMoveItemUp={moveItemUp}
+            onMoveItemDown={moveItemDown}
+            onSaveItemOrder={saveItemOrder}
+          />
         </div>
 
-        {/* ── Filter tabs ── */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-8">
-          {['All', ...selectedCategories].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveFilter(cat)}
-              className={`flex-shrink-0 px-5 py-3 rounded-xl border text-xs font-semibold uppercase tracking-widest transition-all duration-200 ${
-                activeFilter === cat
-                  ? 'border-gold bg-gold/10 text-gold'
-                  : 'border-dark-border bg-dark-card text-gray-500 hover:border-gold/20 hover:text-gray-300'
-              }`}
-            >
-              <span className="block text-xl font-light mb-0.5">{filterCounts[cat] ?? 0}</span>
-              {cat === 'All' ? t.all : (t[cat] || cat)}
-            </button>
-          ))}
-        </div>
+        <MenuPreviewSection
+          loading={loading}
+          activeFilter={activeFilter}
+          selectedCategories={selectedCategories}
+          filtered={filtered}
+          filterCounts={filterCounts}
+          onSetActiveFilter={setActiveFilter}
+          onAddItem={handleAddItem}
+          onEditItem={(i) => { setEditItem(i); setShowAddModal(true); }}
+          onDeleteItem={setDeleteItem}
+        />
 
-        {/* ── Grid ── */}
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <AnimatePresence mode="popLayout">
-            {filtered.length > 0 ? (
-              <motion.div
-                layout
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-              >
-                <AnimatePresence>
-                  {filtered.map((item) => (
-                    <DashboardCard
-                      key={item._id}
-                      item={item}
-                      onEdit={(i) => {
-                        setEditItem(i);
-                        setShowAddModal(true);
-                      }}
-                      onDelete={setDeleteItem}
-                    />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-32"
-              >
-                <p className="text-gray-600 font-serif text-xl">{t.noItemsYet}</p>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="mt-4 text-gold text-sm underline hover:text-gold-light"
-                >
-                  {t.addFirstItem}
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-
-        {/* ── Global Discounts Section ── */}
-        <div className="mt-16 border-t border-dark-border pt-10">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-px bg-gold/40" />
-              <h2 className="font-serif text-2xl text-gold">{t.globalDiscounts}</h2>
-            </div>
-            <button
-              onClick={() => {
-                setEditDiscount(null);
-                setShowDiscountModal(true);
-              }}
-              className="flex items-center gap-2 border border-gold/40 text-gold text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gold/10 transition-colors uppercase tracking-widest"
-            >
-              <span>+</span> {t.addDiscount}
-            </button>
-          </div>
-
-          {discounts.length === 0 ? (
-            <p className="text-gray-600 text-sm font-serif text-center py-12">
-              {t.noDiscounts}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              <AnimatePresence>
-                {discounts.map((d) => (
-                  <DiscountRow
-                    key={d._id}
-                    discount={d}
-                    onEdit={(disc) => {
-                      setEditDiscount(disc);
-                      setShowDiscountModal(true);
-                    }}
-                    onDelete={setDeleteDiscountItem}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-
+        <DiscountSettings
+          discounts={discounts}
+          onAddDiscount={() => { setEditDiscount(null); setShowDiscountModal(true); }}
+          onEditDiscount={(disc) => { setEditDiscount(disc); setShowDiscountModal(true); }}
+          onDeleteDiscount={setDeleteDiscountItem}
+        />
       </div>
 
       {/* ── Modals ── */}
