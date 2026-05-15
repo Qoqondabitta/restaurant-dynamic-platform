@@ -450,7 +450,7 @@ export default function CustomerMenu() {
   const [menuItems, setMenuItems] = useState([]);
   const [discounts, setDiscounts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // Increments every 10 s to force re-evaluation of time-based discount logic
@@ -524,8 +524,6 @@ export default function CustomerMenu() {
   }, []);
 
   // 'all' is always first and never stored in DB
-  const ALL_TABS = ['all', ...selectedCategories];
-
   // Single active global discount — recomputed on every tick so time-window
   // transitions (active → expired, upcoming → active) are caught without a fetch.
   const activeGlobalDiscount = useMemo(
@@ -573,15 +571,33 @@ export default function CustomerMenu() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [menuLayout, selectedCategories]);
 
+  // Scroll-spy for top layout: initialise + track which category is in view
+  useEffect(() => {
+    if (menuLayout !== 'top') return;
+    if (selectedCategories.length > 0) {
+      setActiveTab((prev) => (prev && selectedCategories.includes(prev) ? prev : selectedCategories[0]));
+    }
+    const handleScroll = () => {
+      for (let i = selectedCategories.length - 1; i >= 0; i--) {
+        const el = document.getElementById(`category-${selectedCategories[i]}`);
+        if (el && el.getBoundingClientRect().top <= 120) {
+          setActiveTab(selectedCategories[i]);
+          return;
+        }
+      }
+      if (selectedCategories.length) setActiveTab(selectedCategories[0]);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [menuLayout, selectedCategories]);
+
   // Items that have any discount (item-level OR global)
   const saleItems = menuItems.filter(
     (i) => getEffectiveDiscount(i, activeGlobalDiscount) !== null
   );
 
   // Group items by category — ordered by sortOrder field
-  const visibleCategories = activeTab === 'all' ? selectedCategories : [activeTab];
-
-  const grouped = visibleCategories.reduce((acc, cat) => {
+  const grouped = selectedCategories.reduce((acc, cat) => {
     const items = menuItems
       .filter((i) => i.category === cat)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -840,16 +856,19 @@ export default function CustomerMenu() {
           <nav className="sticky top-[60px] md:top-16 z-40 bg-dark md:bg-dark/95 md:backdrop-blur-md border-b border-dark-border">
             <div className="max-w-6xl mx-auto px-4">
               <div className="flex gap-0 overflow-x-auto scrollbar-hide">
-                {ALL_TABS.map((tab) => (
+                {selectedCategories.map((cat) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    key={cat}
+                    onClick={() => {
+                      document.getElementById(`category-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      setActiveTab(cat);
+                    }}
                     className={`relative px-6 py-4 text-xs font-semibold uppercase tracking-[0.2em] whitespace-nowrap transition-colors duration-300 ${
-                      activeTab === tab ? 'text-gold' : 'text-gray-500 hover:text-gray-300'
+                      activeTab === cat ? 'text-gold' : 'text-gray-500 hover:text-gray-300'
                     }`}
                   >
-                    {t[tab] || tab}
-                    {activeTab === tab && (
+                    {t[cat] || cat}
+                    {activeTab === cat && (
                       <motion.span
                         layoutId="categoryUnderline"
                         className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold"
@@ -876,36 +895,32 @@ export default function CustomerMenu() {
               </div>
             )}
             {!loading && !error && (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  {Object.entries(grouped).map(([cat, items]) => (
-                    <section key={cat} id={`category-${cat}`}>
-                      <CategoryHeading displayName={t[cat] || cat} />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-5">
-                        {items.map((item, idx) => (
-                          <MenuItemCard
-                            key={item._id}
-                            item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
-                            index={idx}
-                            activeGlobalDiscount={activeGlobalDiscount}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-                  {Object.keys(grouped).length === 0 && (
-                    <div className="text-center py-32">
-                      <p className="text-gray-600 text-lg font-serif">{t.noItems}</p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                {Object.entries(grouped).map(([cat, items]) => (
+                  <section key={cat} id={`category-${cat}`}>
+                    <CategoryHeading displayName={t[cat] || cat} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-5">
+                      {items.map((item, idx) => (
+                        <MenuItemCard
+                          key={item._id}
+                          item={{ ...item, _categoryDisplayName: t[item.category] || item.category }}
+                          index={idx}
+                          activeGlobalDiscount={activeGlobalDiscount}
+                        />
+                      ))}
                     </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+                  </section>
+                ))}
+                {Object.keys(grouped).length === 0 && (
+                  <div className="text-center py-32">
+                    <p className="text-gray-600 text-lg font-serif">{t.noItems}</p>
+                  </div>
+                )}
+              </motion.div>
             )}
           </main>
         </>
