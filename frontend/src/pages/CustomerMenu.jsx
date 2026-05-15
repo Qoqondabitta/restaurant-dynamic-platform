@@ -443,6 +443,19 @@ function CategoryHeading({ displayName }) {
   );
 }
 
+// Sort items by saved order if available, fallback to sortOrder field
+function sortItemsByOrder(items, orderedIds) {
+  if (!orderedIds || orderedIds.length === 0) {
+    return [...items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
+  const idxMap = new Map(orderedIds.map((id, i) => [id, i]));
+  return [...items].sort((a, b) => {
+    const ai = idxMap.has(String(a._id)) ? idxMap.get(String(a._id)) : items.length;
+    const bi = idxMap.has(String(b._id)) ? idxMap.get(String(b._id)) : items.length;
+    return ai - bi;
+  });
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 const POLL_INTERVAL = 15000; // 15 s — balance between freshness and requests
 
@@ -450,6 +463,7 @@ export default function CustomerMenu() {
   const [menuItems, setMenuItems] = useState([]);
   const [discounts, setDiscounts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [savedItemOrder, setSavedItemOrder] = useState({});
   const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -487,6 +501,9 @@ export default function CustomerMenu() {
           const cats = res.data.categories;
           setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
           if (res.data.layout) setMenuLayout(res.data.layout);
+          if (res.data.itemOrder && typeof res.data.itemOrder === 'object') {
+            setSavedItemOrder(res.data.itemOrder);
+          }
         })
         .catch(() => {});
 
@@ -540,13 +557,14 @@ export default function CustomerMenu() {
   const sidebarGrouped = useMemo(
     () =>
       selectedCategories.reduce((acc, cat) => {
-        const items = menuItems
-          .filter((i) => i.category === cat)
-          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        const items = sortItemsByOrder(
+          menuItems.filter((i) => i.category === cat),
+          savedItemOrder[cat]
+        );
         if (items.length) acc[cat] = items;
         return acc;
       }, {}),
-    [selectedCategories, menuItems] // eslint-disable-line
+    [selectedCategories, menuItems, savedItemOrder] // eslint-disable-line
   );
 
   // Initialise sidebar active category when layout or categories change
@@ -578,13 +596,14 @@ export default function CustomerMenu() {
     (i) => getEffectiveDiscount(i, activeGlobalDiscount) !== null
   );
 
-  // Group items by category — ordered by owner-saved sortOrder
+  // Group items by category — ordered by owner-saved itemOrder from settings
   const visibleCategories = activeTab === 'all' ? selectedCategories : [activeTab];
 
   const grouped = visibleCategories.reduce((acc, cat) => {
-    const items = menuItems
-      .filter((i) => i.category === cat)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const items = sortItemsByOrder(
+      menuItems.filter((i) => i.category === cat),
+      savedItemOrder[cat]
+    );
     if (items.length) acc[cat] = items;
     return acc;
   }, {});
