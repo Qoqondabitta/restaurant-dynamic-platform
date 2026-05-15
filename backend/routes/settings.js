@@ -11,7 +11,12 @@ router.get('/', async (req, res) => {
     if (!settings) {
       settings = await RestaurantSettings.create({ languages: ['en'] });
     }
-    res.json(settings);
+    const doc = settings.toObject();
+    // Guarantee itemOrder is always a plain object in the response — older
+    // documents created before the field was added to the schema would
+    // otherwise omit it from the JSON, breaking CustomerMenu sorting.
+    if (!doc.itemOrder || typeof doc.itemOrder !== 'object') doc.itemOrder = {};
+    res.json(doc);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -41,10 +46,12 @@ router.put('/', async (req, res) => {
     }
 
     // Save settings — never blocked
+    // Explicit $set so Mongoose doesn't treat updatePayload as a replacement
+    // document, which breaks Mixed-type fields like itemOrder.
     const settings = await RestaurantSettings.findOneAndUpdate(
       {},
-      updatePayload,
-      { upsert: true, new: true, runValidators: true }
+      { $set: updatePayload },
+      { upsert: true, new: true }
     );
 
     // Sync sortOrder on MenuItem docs so GET /menu sort reflects the saved order.
