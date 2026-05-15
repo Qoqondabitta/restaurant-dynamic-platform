@@ -21,7 +21,6 @@ import LanguageSettings from '../components/dashboard/LanguageSettings';
 import CategorySettings from '../components/dashboard/CategorySettings';
 import LayoutSwitcher from '../components/dashboard/LayoutSwitcher';
 import CategoryOrderSection from '../components/dashboard/CategoryOrderSection';
-import ItemOrderSection from '../components/dashboard/ItemOrderSection';
 import MenuPreviewSection from '../components/dashboard/MenuPreviewSection';
 import DiscountSettings from '../components/dashboard/DiscountSettings';
 
@@ -1036,13 +1035,7 @@ export default function Dashboard() {
   // Layout selection
   const [menuLayout, setMenuLayout] = useState('top');
   const [layoutSaved, setLayoutSaved] = useState(false);
-  // Sort order
-  const [localItemOrder, setLocalItemOrder] = useState({});   // { [cat]: [_id, ...] }
-  const [orderActiveCat, setOrderActiveCat] = useState('');
   const [catOrderSaved, setCatOrderSaved] = useState(false);
-  const [itemOrderSaved, setItemOrderSaved] = useState(false);
-  const [itemOrderError, setItemOrderError] = useState(false);
-  const [savingItemOrder, setSavingItemOrder] = useState(false);
 
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
     enabledLangCodes.includes(l.code)
@@ -1055,35 +1048,12 @@ export default function Dashboard() {
         fetchDiscounts(),
         fetchSettings(),
       ]);
-      const menuItems = menuRes.data;
-      setItems(menuItems);
+      setItems(menuRes.data);
       setDiscounts(discountRes.data);
       setEnabledLangCodes(settingsRes.data.languages || ['en']);
       const cats = settingsRes.data.categories;
-      const validCats = Array.isArray(cats) && cats.length ? cats : ['main'];
-      setSelectedCategories(validCats);
+      setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
       if (settingsRes.data.layout === 'sidebar') setMenuLayout('sidebar');
-
-      // Build localItemOrder from saved settings, falling back to sortOrder for new items
-      const savedOrder = settingsRes.data.itemOrder || {};
-      const order = {};
-      validCats.forEach((cat) => {
-        const catItems = menuItems.filter((i) => i.category === cat);
-        if (savedOrder[cat] && savedOrder[cat].length > 0) {
-          const existingIds = new Set(catItems.map((i) => String(i._id)));
-          const validIds = savedOrder[cat].filter((id) => existingIds.has(id));
-          const savedSet = new Set(validIds);
-          const newItems = catItems
-            .filter((i) => !savedSet.has(String(i._id)))
-            .map((i) => String(i._id));
-          order[cat] = [...validIds, ...newItems];
-        } else {
-          order[cat] = catItems
-            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-            .map((i) => String(i._id));
-        }
-      });
-      setLocalItemOrder(order);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1153,15 +1123,6 @@ export default function Dashboard() {
 
   // ── Sort-order helpers ────────────────────────────────────────────────────
 
-  // Keep orderActiveCat pointing at a valid category
-  useEffect(() => {
-    setOrderActiveCat((prev) => {
-      if (!prev && selectedCategories.length > 0) return selectedCategories[0];
-      if (prev && !selectedCategories.includes(prev) && selectedCategories.length > 0) return selectedCategories[0];
-      return prev;
-    });
-  }, [selectedCategories]);
-
   const moveCategoryUp = (idx) => {
     if (idx === 0) return;
     setCatOrderSaved(false);
@@ -1189,42 +1150,6 @@ export default function Dashboard() {
       setTimeout(() => setCatOrderSaved(false), 3000);
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const moveItemUp = (cat, idx) => {
-    if (idx === 0) return;
-    setItemOrderSaved(false);
-    setLocalItemOrder((prev) => {
-      const ids = [...(prev[cat] || [])];
-      [ids[idx - 1], ids[idx]] = [ids[idx], ids[idx - 1]];
-      return { ...prev, [cat]: ids };
-    });
-  };
-
-  const moveItemDown = (cat, idx) => {
-    setItemOrderSaved(false);
-    setLocalItemOrder((prev) => {
-      const ids = [...(prev[cat] || [])];
-      if (idx >= ids.length - 1) return prev;
-      [ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
-      return { ...prev, [cat]: ids };
-    });
-  };
-
-  const saveItemOrder = async () => {
-    setSavingItemOrder(true);
-    setItemOrderError(false);
-    try {
-      await updateSettings({ languages: enabledLangCodes, categories: selectedCategories, layout: menuLayout, itemOrder: localItemOrder });
-      setItemOrderSaved(true);
-      setTimeout(() => setItemOrderSaved(false), 3000);
-    } catch (err) {
-      console.error('saveItemOrder error:', err);
-      setItemOrderError(true);
-      setTimeout(() => setItemOrderError(false), 4000);
-    } finally {
-      setSavingItemOrder(false);
     }
   };
 
@@ -1327,19 +1252,6 @@ export default function Dashboard() {
             onMoveUp={moveCategoryUp}
             onMoveDown={moveCategoryDown}
             onSaveCategoryOrder={saveCategoryOrder}
-          />
-          <ItemOrderSection
-            selectedCategories={selectedCategories}
-            orderActiveCat={orderActiveCat}
-            localItemOrder={localItemOrder}
-            items={items}
-            itemOrderSaved={itemOrderSaved}
-            itemOrderError={itemOrderError}
-            savingItemOrder={savingItemOrder}
-            onSetActiveCat={setOrderActiveCat}
-            onMoveItemUp={moveItemUp}
-            onMoveItemDown={moveItemDown}
-            onSaveItemOrder={saveItemOrder}
           />
         </div>
 

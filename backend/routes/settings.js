@@ -11,21 +11,16 @@ router.get('/', async (req, res) => {
     if (!settings) {
       settings = await RestaurantSettings.create({ languages: ['en'] });
     }
-    const doc = settings.toObject();
-    // Guarantee itemOrder is always a plain object in the response — older
-    // documents created before the field was added to the schema would
-    // otherwise omit it from the JSON, breaking CustomerMenu sorting.
-    if (!doc.itemOrder || typeof doc.itemOrder !== 'object') doc.itemOrder = {};
-    res.json(doc);
+    res.json(settings);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// PUT /settings — save languages + optional categories/itemOrder; returns non-blocking warnings
+// PUT /settings — save languages + optional categories; returns non-blocking warnings
 router.put('/', async (req, res) => {
   try {
-    const { languages, categories: selectedCategories, layout, itemOrder } = req.body;
+    const { languages, categories: selectedCategories, layout } = req.body;
     if (!Array.isArray(languages) || languages.length === 0) {
       return res.status(400).json({ message: 'At least one language is required' });
     }
@@ -41,28 +36,13 @@ router.put('/', async (req, res) => {
     if (layout === 'top' || layout === 'sidebar') {
       updatePayload.layout = layout;
     }
-    if (itemOrder && typeof itemOrder === 'object') {
-      updatePayload.itemOrder = itemOrder;
-    }
 
     // Save settings — never blocked
-    // Explicit $set so Mongoose doesn't treat updatePayload as a replacement
-    // document, which breaks Mixed-type fields like itemOrder.
     const settings = await RestaurantSettings.findOneAndUpdate(
       {},
       { $set: updatePayload },
       { upsert: true, new: true }
     );
-
-    // Sync sortOrder on MenuItem docs so GET /menu sort reflects the saved order.
-    // findByIdAndUpdate is used (not bulkWrite) because it reliably casts string ids to ObjectId.
-    if (itemOrder && typeof itemOrder === 'object') {
-      const syncOps = [];
-      for (const [, ids] of Object.entries(itemOrder)) {
-        ids.forEach((id, idx) => syncOps.push(MenuItem.findByIdAndUpdate(id, { sortOrder: idx })));
-      }
-      if (syncOps.length > 0) await Promise.all(syncOps);
-    }
 
     // Non-blocking validation: detect items missing translations
     const items = await MenuItem.find();

@@ -13,28 +13,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /menu/reorder — bulk-update sortOrder for a list of items
-// Must be declared before PUT /:id so Express doesn't treat "reorder" as an id
-router.put('/reorder', async (req, res) => {
-  try {
-    const { orders } = req.body; // [{ _id, sortOrder }, ...]
-    if (!Array.isArray(orders) || orders.length === 0) {
-      return res.status(400).json({ message: 'orders must be a non-empty array' });
-    }
-    await MenuItem.bulkWrite(
-      orders.map(({ _id, sortOrder }) => ({
-        updateOne: {
-          filter: { _id: String(_id) },
-          update: { $set: { sortOrder: Number(sortOrder) } },
-        },
-      }))
-    );
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
 // POST /menu — add a new item (multipart/form-data or imageUrl in body)
 router.post('/', upload.single('image'), async (req, res) => {
   try {

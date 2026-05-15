@@ -17,8 +17,6 @@ export const updateMenuItem = (id, formData) =>
 
 export const deleteMenuItem = (id) => axios.delete(`${BASE}/${id}`);
 
-export const reorderMenuItems = (orders) => axios.put(`${BASE}/reorder`, { orders });
-
 // Resolve image src: local /uploads/* is proxied; external URLs pass through
 export const resolveImage = (image) => {
   if (!image) return 'https://placehold.co/600x400/141414/c9a84c?text=No+Image';

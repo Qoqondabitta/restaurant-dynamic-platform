@@ -19,10 +19,6 @@ const restaurantSettingsSchema = new mongoose.Schema(
       enum: ['top', 'sidebar'],
       default: 'top',
     },
-    itemOrder: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
-    },
   },
   { timestamps: true }
 );
