@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 // PUT /settings — save languages + optional categories; returns non-blocking warnings
 router.put('/', async (req, res) => {
   try {
-    const { languages, categories: selectedCategories, layout, itemOrder } = req.body;
+    const { languages, categories: selectedCategories, layout } = req.body;
     if (!Array.isArray(languages) || languages.length === 0) {
       return res.status(400).json({ message: 'At least one language is required' });
     }
@@ -40,10 +40,6 @@ router.put('/', async (req, res) => {
     if (layout === 'top' || layout === 'sidebar') {
       updatePayload.layout = layout;
     }
-    if (itemOrder && typeof itemOrder === 'object' && !Array.isArray(itemOrder)) {
-      updatePayload.itemOrder = itemOrder;
-    }
-
     // Save settings — never blocked
     const settings = await RestaurantSettings.findOneAndUpdate(
       {},

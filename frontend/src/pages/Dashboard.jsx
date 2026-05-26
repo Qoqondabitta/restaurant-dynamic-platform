@@ -6,6 +6,7 @@ import {
   updateMenuItem,
   deleteMenuItem,
   resolveImage,
+  reorderMenuItems,
 } from '../api/menu';
 import {
   fetchDiscounts,
@@ -1061,16 +1062,13 @@ export default function Dashboard() {
       setSelectedCategories(allCats);
       if (settingsRes.data.layout === 'sidebar') setMenuLayout('sidebar');
 
-      // Build merged item order: saved IDs first, then any new items not yet ordered
-      const savedOrder = settingsRes.data.itemOrder || {};
+      // Build item order from each item's sortOrder field (the source of truth)
       const mergedOrder = {};
       for (const cat of allCats) {
-        const savedIds = Array.isArray(savedOrder[cat]) ? savedOrder[cat] : [];
-        const catIds = allItems.filter((i) => i.category === cat).map((i) => String(i._id));
-        mergedOrder[cat] = [
-          ...savedIds.filter((id) => catIds.includes(id)),
-          ...catIds.filter((id) => !savedIds.includes(id)),
-        ];
+        const catItems = allItems
+          .filter((i) => i.category === cat)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        mergedOrder[cat] = catItems.map((i) => String(i._id));
       }
       setLocalItemOrder(mergedOrder);
       setOrderActiveCat((prev) => (allCats.includes(prev) ? prev : allCats[0]));
@@ -1195,9 +1193,10 @@ export default function Dashboard() {
 
   const saveItemOrder = async () => {
     try {
-      await updateSettings({ languages: enabledLangCodes, categories: selectedCategories, layout: menuLayout, itemOrder: localItemOrder });
+      await reorderMenuItems(localItemOrder);
       setItemOrderSaved(true);
       setTimeout(() => setItemOrderSaved(false), 3000);
+      await loadAll();
     } catch (err) {
       console.error(err);
     }

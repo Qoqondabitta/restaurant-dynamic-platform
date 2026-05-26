@@ -50,6 +50,27 @@ router.post('/', upload.single('image'), async (req, res) => {
   }
 });
 
+// PUT /menu/reorder — persist item display order by updating sortOrder on each item
+router.put('/reorder', async (req, res) => {
+  try {
+    const { itemOrder } = req.body;
+    if (!itemOrder || typeof itemOrder !== 'object' || Array.isArray(itemOrder)) {
+      return res.status(400).json({ message: 'itemOrder object required' });
+    }
+    const updates = [];
+    for (const ids of Object.values(itemOrder)) {
+      if (!Array.isArray(ids)) continue;
+      for (let i = 0; i < ids.length; i++) {
+        updates.push(MenuItem.findByIdAndUpdate(ids[i], { sortOrder: i }));
+      }
+    }
+    await Promise.all(updates);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // PUT /menu/:id — update an item
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
