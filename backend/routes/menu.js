@@ -61,7 +61,7 @@ router.put('/reorder', async (req, res) => {
     for (const ids of Object.values(itemOrder)) {
       if (!Array.isArray(ids)) continue;
       for (let i = 0; i < ids.length; i++) {
-        updates.push(MenuItem.findByIdAndUpdate(ids[i], { sortOrder: i }));
+        updates.push(MenuItem.findByIdAndUpdate(ids[i], { $set: { sortOrder: i } }));
       }
     }
     await Promise.all(updates);
