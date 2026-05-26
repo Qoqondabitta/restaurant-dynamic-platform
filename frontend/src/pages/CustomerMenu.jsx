@@ -17,6 +17,19 @@ const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', RUB: '₽', UZS: "so'm", PLN: '
 const fmtPrice = (price, currency) =>
   `${CURRENCY_SYMBOLS[currency] || '$'}${Number(price).toFixed(2)}`;
 
+function sortItemsByOrder(items, cat, savedItemOrder) {
+  const order = Array.isArray(savedItemOrder[cat]) ? savedItemOrder[cat] : [];
+  if (!order.length) return [...items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  return [...items].sort((a, b) => {
+    const ai = order.indexOf(String(a._id));
+    const bi = order.indexOf(String(b._id));
+    if (ai === -1 && bi === -1) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+}
+
 // ─── Discount helpers ────────────────────────────────────────────────────────
 
 /** Returns the single active global discount, or undefined. */
@@ -459,6 +472,7 @@ export default function CustomerMenu() {
   const [menuLayout, setMenuLayout] = useState('top');
   const [activeSidebarCat, setActiveSidebarCat] = useState('');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [savedItemOrder, setSavedItemOrder] = useState({});
   const { t, lang, refreshSettings } = useLanguage();
 
   // Prevent body scroll while mobile drawer is open
@@ -487,6 +501,7 @@ export default function CustomerMenu() {
           const cats = res.data.categories;
           setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
           if (res.data.layout) setMenuLayout(res.data.layout);
+          setSavedItemOrder(res.data.itemOrder || {});
         })
         .catch(() => {});
 
@@ -538,13 +553,15 @@ export default function CustomerMenu() {
   const sidebarGrouped = useMemo(
     () =>
       selectedCategories.reduce((acc, cat) => {
-        const items = menuItems
-          .filter((i) => i.category === cat)
-          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        const items = sortItemsByOrder(
+          menuItems.filter((i) => i.category === cat),
+          cat,
+          savedItemOrder
+        );
         if (items.length) acc[cat] = items;
         return acc;
       }, {}),
-    [selectedCategories, menuItems] // eslint-disable-line
+    [selectedCategories, menuItems, savedItemOrder] // eslint-disable-line
   );
 
   // Initialise sidebar active category when layout or categories change
@@ -596,11 +613,13 @@ export default function CustomerMenu() {
     (i) => getEffectiveDiscount(i, activeGlobalDiscount) !== null
   );
 
-  // Group items by category — ordered by sortOrder field
+  // Group items by category — ordered by savedItemOrder from settings, fallback to sortOrder
   const grouped = selectedCategories.reduce((acc, cat) => {
-    const items = menuItems
-      .filter((i) => i.category === cat)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const items = sortItemsByOrder(
+      menuItems.filter((i) => i.category === cat),
+      cat,
+      savedItemOrder
+    );
     if (items.length) acc[cat] = items;
     return acc;
   }, {});

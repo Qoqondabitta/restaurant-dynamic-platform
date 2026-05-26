@@ -21,6 +21,7 @@ import LanguageSettings from '../components/dashboard/LanguageSettings';
 import CategorySettings from '../components/dashboard/CategorySettings';
 import LayoutSwitcher from '../components/dashboard/LayoutSwitcher';
 import CategoryOrderSection from '../components/dashboard/CategoryOrderSection';
+import ItemOrderSection from '../components/dashboard/ItemOrderSection';
 import MenuPreviewSection from '../components/dashboard/MenuPreviewSection';
 import DiscountSettings from '../components/dashboard/DiscountSettings';
 
@@ -1036,6 +1037,9 @@ export default function Dashboard() {
   const [menuLayout, setMenuLayout] = useState('top');
   const [layoutSaved, setLayoutSaved] = useState(false);
   const [catOrderSaved, setCatOrderSaved] = useState(false);
+  const [localItemOrder, setLocalItemOrder] = useState({});
+  const [orderActiveCat, setOrderActiveCat] = useState('');
+  const [itemOrderSaved, setItemOrderSaved] = useState(false);
 
   const enabledLangs = SUPPORTED_LANGUAGES.filter((l) =>
     enabledLangCodes.includes(l.code)
@@ -1048,12 +1052,28 @@ export default function Dashboard() {
         fetchDiscounts(),
         fetchSettings(),
       ]);
-      setItems(menuRes.data);
+      const allItems = menuRes.data;
+      setItems(allItems);
       setDiscounts(discountRes.data);
       setEnabledLangCodes(settingsRes.data.languages || ['en']);
       const cats = settingsRes.data.categories;
-      setSelectedCategories(Array.isArray(cats) && cats.length ? cats : ['main']);
+      const allCats = Array.isArray(cats) && cats.length ? cats : ['main'];
+      setSelectedCategories(allCats);
       if (settingsRes.data.layout === 'sidebar') setMenuLayout('sidebar');
+
+      // Build merged item order: saved IDs first, then any new items not yet ordered
+      const savedOrder = settingsRes.data.itemOrder || {};
+      const mergedOrder = {};
+      for (const cat of allCats) {
+        const savedIds = Array.isArray(savedOrder[cat]) ? savedOrder[cat] : [];
+        const catIds = allItems.filter((i) => i.category === cat).map((i) => String(i._id));
+        mergedOrder[cat] = [
+          ...savedIds.filter((id) => catIds.includes(id)),
+          ...catIds.filter((id) => !savedIds.includes(id)),
+        ];
+      }
+      setLocalItemOrder(mergedOrder);
+      setOrderActiveCat((prev) => (allCats.includes(prev) ? prev : allCats[0]));
     } catch (err) {
       console.error(err);
     } finally {
@@ -1148,6 +1168,36 @@ export default function Dashboard() {
       await updateSettings({ languages: enabledLangCodes, categories: selectedCategories, layout: menuLayout });
       setCatOrderSaved(true);
       setTimeout(() => setCatOrderSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const moveItemUp = (idx) => {
+    setItemOrderSaved(false);
+    setLocalItemOrder((prev) => {
+      const arr = [...(prev[orderActiveCat] || [])];
+      if (idx === 0) return prev;
+      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+      return { ...prev, [orderActiveCat]: arr };
+    });
+  };
+
+  const moveItemDown = (idx) => {
+    setItemOrderSaved(false);
+    setLocalItemOrder((prev) => {
+      const arr = [...(prev[orderActiveCat] || [])];
+      if (idx >= arr.length - 1) return prev;
+      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+      return { ...prev, [orderActiveCat]: arr };
+    });
+  };
+
+  const saveItemOrder = async () => {
+    try {
+      await updateSettings({ languages: enabledLangCodes, categories: selectedCategories, layout: menuLayout, itemOrder: localItemOrder });
+      setItemOrderSaved(true);
+      setTimeout(() => setItemOrderSaved(false), 3000);
     } catch (err) {
       console.error(err);
     }
@@ -1252,6 +1302,17 @@ export default function Dashboard() {
             onMoveUp={moveCategoryUp}
             onMoveDown={moveCategoryDown}
             onSaveCategoryOrder={saveCategoryOrder}
+          />
+          <ItemOrderSection
+            items={items}
+            selectedCategories={selectedCategories}
+            localItemOrder={localItemOrder}
+            activeCat={orderActiveCat}
+            itemOrderSaved={itemOrderSaved}
+            onSetActiveCat={(cat) => { setOrderActiveCat(cat); setItemOrderSaved(false); }}
+            onMoveUp={moveItemUp}
+            onMoveDown={moveItemDown}
+            onSaveItemOrder={saveItemOrder}
           />
         </div>
 

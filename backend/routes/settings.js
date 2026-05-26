@@ -11,7 +11,11 @@ router.get('/', async (req, res) => {
     if (!settings) {
       settings = await RestaurantSettings.create({ languages: ['en'] });
     }
-    res.json(settings);
+    const doc = settings.toObject();
+    if (!doc.itemOrder || typeof doc.itemOrder !== 'object' || Array.isArray(doc.itemOrder)) {
+      doc.itemOrder = {};
+    }
+    res.json(doc);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -20,7 +24,7 @@ router.get('/', async (req, res) => {
 // PUT /settings — save languages + optional categories; returns non-blocking warnings
 router.put('/', async (req, res) => {
   try {
-    const { languages, categories: selectedCategories, layout } = req.body;
+    const { languages, categories: selectedCategories, layout, itemOrder } = req.body;
     if (!Array.isArray(languages) || languages.length === 0) {
       return res.status(400).json({ message: 'At least one language is required' });
     }
@@ -35,6 +39,9 @@ router.put('/', async (req, res) => {
     }
     if (layout === 'top' || layout === 'sidebar') {
       updatePayload.layout = layout;
+    }
+    if (itemOrder && typeof itemOrder === 'object' && !Array.isArray(itemOrder)) {
+      updatePayload.itemOrder = itemOrder;
     }
 
     // Save settings — never blocked

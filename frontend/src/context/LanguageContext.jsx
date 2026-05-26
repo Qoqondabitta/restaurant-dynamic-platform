@@ -116,6 +116,9 @@ const translations = {
     categoryOrder: 'Category Order',
     saveCategoryOrder: 'Save Category Order',
     noCategories: 'No categories selected.',
+    itemOrder: 'Item Order',
+    saveItemOrder: 'Save Item Order',
+    noItemsInCategory: 'No items in this category.',
   },
   ru: {
     menu: 'Меню',
@@ -231,6 +234,9 @@ const translations = {
     categoryOrder: 'Порядок категорий',
     saveCategoryOrder: 'Сохранить порядок категорий',
     noCategories: 'Категории не выбраны.',
+    itemOrder: 'Порядок блюд',
+    saveItemOrder: 'Сохранить порядок блюд',
+    noItemsInCategory: 'Нет блюд в этой категории.',
   },
   uz: {
     menu: 'Menyu',
@@ -346,6 +352,9 @@ const translations = {
     categoryOrder: 'Kategoriyalar tartibi',
     saveCategoryOrder: 'Kategoriyalar tartibini saqlash',
     noCategories: 'Kategoriyalar tanlanmagan.',
+    itemOrder: 'Taomlar tartibi',
+    saveItemOrder: 'Taomlar tartibini saqlash',
+    noItemsInCategory: "Bu kategoriyada taom yo'q.",
   },
   pl: {
     menu: 'Menu',
@@ -461,6 +470,9 @@ const translations = {
     categoryOrder: 'Kolejność kategorii',
     saveCategoryOrder: 'Zapisz kolejność kategorii',
     noCategories: 'Brak wybranych kategorii.',
+    itemOrder: 'Kolejność pozycji',
+    saveItemOrder: 'Zapisz kolejność pozycji',
+    noItemsInCategory: 'Brak pozycji w tej kategorii.',
   },
   es: {
     menu: 'Menú',
@@ -576,6 +588,9 @@ const translations = {
     categoryOrder: 'Orden de categorías',
     saveCategoryOrder: 'Guardar orden de categorías',
     noCategories: 'No hay categorías seleccionadas.',
+    itemOrder: 'Orden de elementos',
+    saveItemOrder: 'Guardar orden de elementos',
+    noItemsInCategory: 'No hay elementos en esta categoría.',
   },
   tr: {
     menu: 'Menü',
@@ -691,6 +706,9 @@ const translations = {
     categoryOrder: 'Kategori Sırası',
     saveCategoryOrder: 'Kategori Sırasını Kaydet',
     noCategories: 'Seçili kategori yok.',
+    itemOrder: 'Ürün Sırası',
+    saveItemOrder: 'Ürün Sırasını Kaydet',
+    noItemsInCategory: 'Bu kategoride ürün yok.',
   },
   ar: {
     menu: 'قائمة الطعام',
@@ -806,6 +824,9 @@ const translations = {
     categoryOrder: 'ترتيب الفئات',
     saveCategoryOrder: 'حفظ ترتيب الفئات',
     noCategories: 'لا توجد فئات محددة.',
+    itemOrder: 'ترتيب العناصر',
+    saveItemOrder: 'حفظ ترتيب العناصر',
+    noItemsInCategory: 'لا توجد عناصر في هذه الفئة.',
   },
   zh: {
     menu: '菜单',
@@ -921,6 +942,9 @@ const translations = {
     categoryOrder: '分类顺序',
     saveCategoryOrder: '保存分类顺序',
     noCategories: '未选择分类。',
+    itemOrder: '菜品顺序',
+    saveItemOrder: '保存菜品顺序',
+    noItemsInCategory: '此类别暂无菜品。',
   },
   ja: {
     menu: 'メニュー',
@@ -1036,6 +1060,9 @@ const translations = {
     categoryOrder: 'カテゴリの順序',
     saveCategoryOrder: 'カテゴリの順序を保存',
     noCategories: 'カテゴリが選択されていません。',
+    itemOrder: '料理の順序',
+    saveItemOrder: '料理の順序を保存',
+    noItemsInCategory: 'このカテゴリにはまだ料理がありません。',
   },
   ko: {
     menu: '메뉴',
@@ -1151,6 +1178,9 @@ const translations = {
     categoryOrder: '카테고리 순서',
     saveCategoryOrder: '카테고리 순서 저장',
     noCategories: '선택된 카테고리가 없습니다.',
+    itemOrder: '메뉴 항목 순서',
+    saveItemOrder: '메뉴 항목 순서 저장',
+    noItemsInCategory: '이 카테고리에 항목이 없습니다.',
   },
   pt: {
     menu: 'Menu',
@@ -1266,6 +1296,9 @@ const translations = {
     categoryOrder: 'Ordem das categorias',
     saveCategoryOrder: 'Salvar ordem das categorias',
     noCategories: 'Nenhuma categoria selecionada.',
+    itemOrder: 'Ordem dos itens',
+    saveItemOrder: 'Guardar ordem dos itens',
+    noItemsInCategory: 'Sem itens nesta categoria.',
   },
   fr: {
     menu: 'Menu',
@@ -1381,6 +1414,9 @@ const translations = {
     categoryOrder: 'Ordre des catégories',
     saveCategoryOrder: 'Enregistrer l\'ordre des catégories',
     noCategories: 'Aucune catégorie sélectionnée.',
+    itemOrder: 'Ordre des éléments',
+    saveItemOrder: "Enregistrer l'ordre des éléments",
+    noItemsInCategory: 'Aucun élément dans cette catégorie.',
   },
   it: {
     menu: 'Menu',
@@ -1496,6 +1532,9 @@ const translations = {
     categoryOrder: 'Ordine delle categorie',
     saveCategoryOrder: 'Salva ordine delle categorie',
     noCategories: 'Nessuna categoria selezionata.',
+    itemOrder: 'Ordine degli elementi',
+    saveItemOrder: 'Salva ordine degli elementi',
+    noItemsInCategory: 'Nessun elemento in questa categoria.',
   },
 };
 
