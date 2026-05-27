@@ -54,8 +54,9 @@ router.post('/', upload.single('image'), async (req, res) => {
 router.put('/reorder', async (req, res) => {
   try {
     const { itemOrder } = req.body;
+    console.log('[reorder] body keys:', Object.keys(req.body || {}), '| itemOrder type:', typeof itemOrder, '| isArray:', Array.isArray(itemOrder));
     if (!itemOrder || typeof itemOrder !== 'object' || Array.isArray(itemOrder)) {
-      return res.status(400).json({ message: 'itemOrder object required' });
+      return res.status(400).json({ message: 'itemOrder must be a plain object mapping category to id array' });
     }
     const updates = [];
     for (const ids of Object.values(itemOrder)) {

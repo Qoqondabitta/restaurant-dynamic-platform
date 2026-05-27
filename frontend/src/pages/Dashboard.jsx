@@ -1193,12 +1193,13 @@ export default function Dashboard() {
 
   const saveItemOrder = async () => {
     try {
+      console.log('[saveItemOrder] sending localItemOrder:', JSON.stringify(localItemOrder));
       await reorderMenuItems(localItemOrder);
       setItemOrderSaved(true);
       setTimeout(() => setItemOrderSaved(false), 3000);
       await loadAll();
     } catch (err) {
-      console.error(err);
+      console.error('[saveItemOrder] error status:', err?.response?.status, '| body:', JSON.stringify(err?.response?.data), '| sent:', JSON.stringify(localItemOrder));
     }
   };
 
